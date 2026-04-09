@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Élections Municipales 2026 — Carte interactive</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Styles du projet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ════ HEADER ════ -->
+  <header>
+    <div class="logo">Municipales <span>2026</span></div>
+    <span class="badge">Open Data · data.gouv.fr</span>
+    <span class="badge sim" id="data-badge">⚠ Données simulées</span>
+    <div class="nav-hint">
+      Commune <kbd>→</kbd> Bureaux de vote · Clic sur la carte pour zoomer
+    </div>
+  </header>
+
+  <!-- ════ PANNEAU GAUCHE ════ -->
+  <aside class="panel" id="left-panel">
+
+    <div class="section">
+      <div class="section-title">Afficher sur la carte</div>
+      <div class="filter-list" id="mode-filters">
+        <button class="filter-btn active" style="color:var(--orange)" data-mode="abstention">
+          <span class="dot" style="background:var(--orange)"></span>
+          Taux d'abstention
+          <span class="pct" id="m-abs-avg">—</span>
+        </button>
+        <button class="filter-btn" style="color:var(--accent)" data-mode="listes">
+          <span class="dot" style="background:var(--accent)"></span>
+          Nombre de listes
+          <span class="pct" id="m-lst-avg">—</span>
+        </button>
+        <button class="filter-btn" style="color:var(--green)" data-mode="sortant">
+          <span class="dot" style="background:var(--green)"></span>
+          Sortant présent
+          <span class="pct" id="m-srt-avg">—</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Filtrer par CSP</div>
+      <div class="filter-list" id="csp-filters">
+        <button class="filter-btn active" style="color:var(--text)" data-csp="all">
+          <span class="dot" style="background:var(--dim)"></span>Toutes les CSP
+        </button>
+        <button class="filter-btn" style="color:#3d8bff" data-csp="Ouvriers">
+          <span class="dot" style="background:#3d8bff"></span>Ouvriers
+        </button>
+        <button class="filter-btn" style="color:#9b7aff" data-csp="Cadres">
+          <span class="dot" style="background:#9b7aff"></span>Cadres / prof. intellectuelles
+        </button>
+        <button class="filter-btn" style="color:#f5c842" data-csp="Retraités">
+          <span class="dot" style="background:#f5c842"></span>Retraités
+        </button>
+        <button class="filter-btn" style="color:#34d07a" data-csp="Employés">
+          <span class="dot" style="background:#34d07a"></span>Employés
+        </button>
+        <button class="filter-btn" style="color:#c97c4a" data-csp="Agriculteurs">
+          <span class="dot" style="background:#c97c4a"></span>Agriculteurs
+        </button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Communes disponibles</div>
+      <div class="commune-list" id="commune-list"></div>
+    </div>
+
+    <div class="section" style="margin-top:auto">
+      <div class="note">
+        Placez <code>bureaux_vote_final.json</code> dans <code>data/processed/</code>
+        et relancez le serveur local pour utiliser les vraies données.
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ════ CARTE ════ -->
+  <main class="map-area">
+    <div id="map"></div>
+    <div class="map-tooltip" id="map-tooltip"></div>
+    <div class="map-legend" id="map-legend"></div>
+  </main>
+
+  <!-- ════ PANNEAU DROIT ════ -->
+  <aside class="panel" id="right-panel">
+    <div class="breadcrumb" id="breadcrumb">
+      <span class="bc-item active" data-action="national">France</span>
+    </div>
+    <div class="scroll-section" id="right-content"></div>
+  </aside>
+
+</div>
+
+<!-- Script principal (chargé en dernier) -->
+<script src="js/app.js"></script>
+
+</body>
+</html>

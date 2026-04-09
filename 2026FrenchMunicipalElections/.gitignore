@@ -1,0 +1,36 @@
+# Données brutes volumineuses (>10 Mo — à télécharger via le pipeline)
+data/raw/resultats_t1_bureaux.csv
+data/raw/resultats_t2_bureaux.csv
+data/raw/listes_candidates_t1.csv
+data/raw/listes_candidates_t2.csv
+data/raw/sortants_rne.csv
+
+# Données processed lourdes
+data/processed/bureaux_vote_final.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+env/
+*.egg
+
+# VS Code
+.vscode/settings.json
+.vscode/*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Logs
+*.log

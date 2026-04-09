@@ -1,0 +1,16 @@
+﻿COG;Libellé de la commune;nb_bv;inscrits;votants;abstentions;exprimes;nb_listes;sortant;csp_dominante;taux_abstention
+01053;Bourg-en-Bresse;3;2854;1280;1574;1197;3;True;Employés;55.15
+06088;Nice;6;5750;3666;2084;3461;4;True;Retraités;36.24
+13055;Marseille;12;16554;9406;7148;8967;6;True;Retraités;43.18
+29232;Quimper;4;4827;2582;2245;2472;3;True;Retraités;46.51
+31555;Toulouse;7;9988;5331;4657;5055;6;True;Cadres;46.63
+33063;Bordeaux;6;4966;2503;2463;2363;5;False;Retraités;49.6
+44109;Nantes;5;4903;2904;1999;2759;5;False;Cadres;40.77
+48095;Mende;2;2328;1436;892;1367;2;True;Retraités;38.32
+59350;Lille;8;10096;5598;4498;5330;7;True;Ouvriers;44.55
+63113;Clermont-Ferrand;4;5078;3353;1725;3175;4;True;Retraités;33.97
+67482;Strasbourg;6;8565;4018;4547;3811;5;True;Cadres;53.09
+69123;Lyon 3e;5;5877;3021;2856;2873;5;True;Cadres;48.6
+75056;Paris 11e;8;10931;6878;4053;6477;7;False;Cadres;37.08
+76540;Rouen;4;2927;1623;1304;1547;4;True;Retraités;44.55
+84031;Carpentras;3;4836;3040;1796;2901;3;True;Retraités;37.14
