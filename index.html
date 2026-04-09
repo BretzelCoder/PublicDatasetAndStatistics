@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Public Dataset & Statistics</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    header {
+      max-width: 900px;
+      margin: 0 auto 2rem;
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    header p {
+      color: #666;
+      font-size: 0.95rem;
+    }
+
+    .grid {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .card:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.09);
+      border-color: #b0b0b0;
+    }
+
+    .card-icon {
+      font-size: 1.6rem;
+      line-height: 1;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .card-desc {
+      font-size: 0.875rem;
+      color: #555;
+      line-height: 1.4;
+    }
+
+    .card-tag {
+      display: inline-block;
+      margin-top: 0.25rem;
+      font-size: 0.75rem;
+      background: #eef2ff;
+      color: #4f46e5;
+      border-radius: 4px;
+      padding: 0.15rem 0.5rem;
+      align-self: flex-start;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Public Dataset &amp; Statistics</h1>
+    <p>A collection of data visualisation projects built from public datasets.</p>
+  </header>
+
+  <div class="grid">
+
+    <a class="card" href="ColmarMonthlyPrecipitation/precipitations_comparatif_colmar_hautrhin_france.html _ Claude.html">
+      <div class="card-icon">🌧️</div>
+      <div class="card-title">Colmar Monthly Precipitation</div>
+      <div class="card-desc">Comparative analysis of monthly precipitation in Colmar, Haut-Rhin and France.</div>
+      <span class="card-tag">Meteorology</span>
+    </a>
+
+  </div>
+
+</body>
+</html>
