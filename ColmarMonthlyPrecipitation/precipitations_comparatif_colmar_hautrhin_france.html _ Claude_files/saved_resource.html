@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<!-- saved from url=(0012)about:srcdoc -->
+<html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.13/html-to-image.min.js" integrity="sha512-iZ2ORl595Wx6miw+GuadDet4WQbdSWS3JLMoNfY8cRGoEFy6oT3G9IbcrBeL6AfkgpA51ETt/faX6yLV+/gFJg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+      (function() {
+        const originalConsole = window.console;
+        window.console = {
+          log: (...args) => {
+            originalConsole.log(...args);
+            window.parent.postMessage({ type: 'console', message: args.join(' ') }, '*');
+          },
+          error: (...args) => {
+            originalConsole.error(...args);
+            window.parent.postMessage({ type: 'console', message: 'Error: ' + args.join(' ') }, '*');
+          },
+          warn: (...args) => {
+            originalConsole.warn(...args);
+            window.parent.postMessage({ type: 'console', message: 'Warning: ' + args.join(' ') }, '*');
+          }
+        };
+
+        let requestId = 0;
+        let callbacksMap = new Map();
+        let streamControllers = new Map();
+        
+        window.claude = {
+          complete: (prompt) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'claudeComplete', id, prompt }, '*');
+            });
+          }
+        };
+
+        window.storage = {
+          get: (key, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageGet', id, key, shared }, '*');
+            });
+          },
+          set: (key, value, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageSet', id, key, value, shared }, '*');
+            });
+          },
+          delete: (key, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageDelete', id, key, shared }, '*');
+            });
+          },
+          list: (prefix, shared = false) => {
+            return new Promise((resolve, reject) => {
+              const id = requestId++;
+              callbacksMap.set(id, { resolve, reject });
+              window.parent.postMessage({ type: 'storageList', id, prefix, shared }, '*');
+            });
+          }
+        };
+
+        let pendingBlobs = new Map();
+        URL.createObjectURL = (blob) => {
+          // Store the blob and create an ID and URL for it
+          const blobId = `blob-${Date.now()}-${Math.random()}`;
+          pendingBlobs.set(blobId, blob);
+          return `blob-request://${blobId}`;
+        };
+
+        URL.revokeObjectURL = (url) => {
+          // Remove the blob from our store
+          const blobId = url.replace("blob-request://", "");
+          pendingBlobs.delete(blobId);
+        };
+
+        const getBlobFromURL = (url) => {
+          const blobId = url.replace("blob-request://", "");
+          return pendingBlobs.get(blobId);
+        };
+
+        // Override global fetch with streaming support
+        window.fetch = (url, init = {}) => {
+          return new Promise((resolve, reject) => {
+            const id = requestId++;
+            const channelId = `fetch-${id}-${Date.now()}`;
+            
+            callbacksMap.set(id, { 
+              resolve: (response) => {
+                // Create a ReadableStream for the response body
+                const stream = new ReadableStream({
+                  start(controller) {
+                    streamControllers.set(channelId, controller);
+                  },
+                  cancel() {
+                    streamControllers.delete(channelId);
+                  }
+                });
+                
+                // Create and return the Response with the stream
+                resolve(new Response(stream, {
+                  status: response.status,
+                  statusText: response.statusText,
+                  headers: response.headers
+                }));
+              },
+              reject,
+              channelId
+            });
+            
+            window.parent.postMessage({
+              type: 'proxyFetch',
+              id,
+              url,
+              init,
+              channelId
+            }, '*');
+          });
+        };
+
+        window.addEventListener('message', async (event) => {
+          if (event.data.type === 'takeScreenshot') {
+            const rootElement = document.getElementById('artifacts-component-root-html');
+            if (!rootElement) {
+              window.parent.postMessage({
+                type: 'screenshotError',
+                error: new Error('Root element not found'),
+              }, '*');
+            }
+            const screenshot = await htmlToImage.toPng(rootElement, {
+              imagePlaceholder:
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjePDgwX8ACOQDoNsk0PMAAAAASUVORK5CYII=",
+            });
+            window.parent.postMessage({
+              type: 'screenshotData',
+              data: screenshot,
+            }, '*');
+          } else if (event.data.type === 'claudeComplete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.completion);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'proxyFetchResponse') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+              callbacksMap.delete(event.data.id);
+            } else {
+              // Initial response with headers, status, etc.
+              callback.resolve({
+                status: event.data.status,
+                statusText: event.data.statusText,
+                headers: event.data.headers
+              });
+              // Don't delete the callback yet if streaming
+              if (!event.data.body) {
+                callbacksMap.delete(event.data.id);
+              }
+            }
+          } else if (event.data.type === 'proxyFetchStream') {
+            // Handle streaming data chunks
+            const controller = streamControllers.get(event.data.channelId);
+            if (controller) {
+              if (event.data.error) {
+                controller.error(new Error(event.data.error));
+                streamControllers.delete(event.data.channelId);
+              } else if (event.data.done) {
+                controller.close();
+                streamControllers.delete(event.data.channelId);
+                // Clean up the callback
+                const callback = Array.from(callbacksMap.entries()).find(
+                  ([_, value]) => value.channelId === event.data.channelId
+                );
+                if (callback) {
+                  callbacksMap.delete(callback[0]);
+                }
+              } else if (event.data.chunk) {
+                controller.enqueue(new Uint8Array(event.data.chunk));
+              }
+            }
+          } else if (event.data.type === 'storageGet') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageSet') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageDelete') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          } else if (event.data.type === 'storageList') {
+            const callback = callbacksMap.get(event.data.id);
+            if (event.data.error) {
+              callback.reject(new Error(event.data.error));
+            } else {
+              callback.resolve(event.data.result);
+            }
+            callbacksMap.delete(event.data.id);
+          }
+        });
+
+        window.addEventListener('click', (event) => {
+          const isEl = event.target instanceof HTMLElement;
+          if (!isEl) return;
+    
+          // find ancestor links
+          const linkEl = event.target.closest("a");
+          if (!linkEl || !linkEl.href) return;
+    
+          event.preventDefault();
+          event.stopImmediatePropagation();
+    
+          if (linkEl.href.startsWith("blob-request:")) {
+            const blob = getBlobFromURL(linkEl.href);
+            if (!blob) return;
+            void blob.arrayBuffer().then((data) => {
+              window.parent.postMessage({
+                type: "downloadFile",
+                filename: linkEl.download,
+                data,
+                mimeType: blob.type || "application/octet-stream",
+              });
+            });
+          } else if (linkEl.href.startsWith("data:")) {
+            const [header, base64Data] = linkEl.href.split(",");
+            const mimeMatch = header.match(/data:([^;]+)/);
+            const mimeType = mimeMatch ? mimeMatch[1] : "application/octet-stream";
+            const binaryString = atob(base64Data);
+            const data = Uint8Array.from(binaryString, (c) =>
+              c.charCodeAt(0),
+            ).buffer;
+            window.parent.postMessage({
+              type: "downloadFile",
+              filename: linkEl.download,
+              data,
+              mimeType,
+            });
+          } else {
+            let linkUrl;
+            try {
+              linkUrl = new URL(linkEl.href);
+            } catch (error) {
+              return;
+            }
+    
+            if (linkUrl.hostname === window.location.hostname) return;
+      
+            window.parent.postMessage({
+              type: 'openExternal',
+              href: linkEl.href,
+            }, '*');
+          }
+      });
+
+        const originalOpen = window.open;
+        window.open = function (url) {
+          window.parent.postMessage({
+            type: "openExternal",
+            href: url,
+          }, "*");
+        };
+
+        window.addEventListener('error', (event) => {
+          window.parent.postMessage({ type: 'console', message: 'Uncaught Error: ' + event.message }, '*');
+        });
+      })();
+    </script>
+  
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Précipitations comparatives – Colmar / Haut-Rhin / France 2005–2024</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: sans-serif; background: #fff; color: #111; padding: 2rem; max-width: 900px; margin: auto; }
+  h1 { font-size: 18px; font-weight: 500; margin-bottom: .25rem; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 1.5rem; }
+
+  .toggles { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 1.2rem; }
+  .tog { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px; border: 1.5px solid; cursor: pointer; font-size: 13px; font-weight: 500; transition: opacity .15s; user-select: none; background: transparent; }
+  .tog.off { opacity: .32; }
+  .tog-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+
+  .view-pills { display: flex; gap: 6px; flex-wrap: wrap; padding: 2px; }
+  .vpill { font-size: 13px; padding: 5px 16px; border-radius: 20px; border: none; cursor: pointer; font-weight: 400; background: #f0f0f0; color: #555; transition: background .12s, color .12s, box-shadow .12s; }
+  .vpill.active { background: #fff; color: #111; font-weight: 500; box-shadow: 0 0 0 1.5px #999; }
+
+  .yr-sel { font-size: 12px; border: 0.5px solid #ccc; border-radius: 8px; background: transparent; color: #111; padding: 3px 8px; }
+  .period-bar { display: none; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; background: #f5f5f5; border-radius: 8px; padding: 8px 12px; }
+  .period-bar label { font-size: 12px; color: #777; white-space: nowrap; }
+  .period-tag { font-size: 11px; color: #aaa; margin-left: auto; white-space: nowrap; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; margin-top: 1.4rem; }
+  .stat { border-radius: 8px; padding: 10px 12px; }
+  .stat-label { font-size: 11px; margin-bottom: 3px; font-weight: 500; }
+  .stat-value { font-size: 18px; font-weight: 500; }
+  .stat-sub { font-size: 10px; margin-top: 2px; }
+
+  .note { font-size: 11px; color: #aaa; margin-top: 1rem; }
+  .tend-note { font-size: 12px; color: #666; margin-bottom: 10px; margin-top: .8rem; padding: 8px 12px; border-left: 3px solid #ddd; background: #f5f5f5; border-radius: 0 8px 8px 0; }
+  .legend-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 6px; margin-top: .6rem; font-size: 12px; color: #666; }
+  .legend-row span { display: flex; align-items: center; gap: 5px; }
+  .ldot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+  @media (max-width: 500px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body id="artifacts-component-root-html">
+<h1>Précipitations mensuelles comparatives</h1>
+<p class="subtitle">Colmar (68000) · Haut-Rhin (dépt. 68) · France métropolitaine — 2005–2024 · Source : Météo-France</p>
+
+<div class="toggles">
+  <button class="tog" id="tog0" style="border-color:#185FA5;color:#185FA5" onclick="toggle(0)">
+    <span class="tog-dot" style="background:#185FA5"></span>Colmar (68000)
+  </button>
+  <button class="tog" id="tog1" style="border-color:#0F6E56;color:#0F6E56" onclick="toggle(1)">
+    <span class="tog-dot" style="background:#1D9E75"></span>Haut-Rhin (dépt. 68)
+  </button>
+  <button class="tog" id="tog2" style="border-color:#993C1D;color:#993C1D" onclick="toggle(2)">
+    <span class="tog-dot" style="background:#D85A30"></span>France métropolitaine
+  </button>
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:1rem;">
+  <div class="view-pills">
+    <button class="vpill" id="vbtn-moyenne" onclick="setView(&#39;moyenne&#39;)">Moyennes</button>
+    <button class="vpill active" id="vbtn-annee" onclick="setView(&#39;annee&#39;)">Par année</button>
+    <button class="vpill" id="vbtn-tendance" onclick="setView(&#39;tendance&#39;)">Tendance</button>
+  </div>
+  <select class="yr-sel" id="yrSel" style="display: inline-block;" onchange="render()"><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option></select>
+</div>
+
+<div class="period-bar" id="periodBar" style="display: none;">
+  <label>Période :</label>
+  <select class="yr-sel" id="yrFrom" onchange="onPeriodChange()"><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option></select>
+  <span style="font-size:12px;color:#aaa">→</span>
+  <select class="yr-sel" id="yrTo" onchange="onPeriodChange()"><option value="2005">2005</option><option value="2006">2006</option><option value="2007">2007</option><option value="2008">2008</option><option value="2009">2009</option><option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option><option value="2020">2020</option><option value="2021">2021</option><option value="2022">2022</option><option value="2023">2023</option><option value="2024">2024</option></select>
+  <span class="period-tag" id="periodTag">20 années</span>
+</div>
+
+<div id="tendNote" style="display:none" class="tend-note">
+  Pente de régression linéaire par mois (mm/an) sur 2005–2024. Couleur pleine = hausse, translucide = baisse.
+</div>
+<div id="legendRow" class="legend-row" style="display: flex;"><span><span class="ldot" style="background:#185FA5cc"></span>Colmar 2007</span><span><span class="ldot" style="background:#1D9E7599"></span>Haut-Rhin moy.</span><span><span class="ldot" style="background:#D85A3099"></span>France moy.</span></div>
+
+<div style="position:relative;width:100%;height:340px;margin-top:.4rem;">
+  <canvas id="ch" style="box-sizing: border-box; display: block; height: 340px; width: 836px;" width="836" height="340"></canvas>
+</div>
+
+<div class="stat-grid" id="stats"><div class="stat" style="background:#E6F1FB">
+      <div class="stat-label" style="color:#0C447C">Colmar</div>
+      <div class="stat-value" style="color:#0C447C">585 mm/an</div>
+      <div class="stat-sub" style="color:#0C447C">Max 62 mm · Min 32 mm</div>
+    </div><div class="stat" style="background:#E1F5EE">
+      <div class="stat-label" style="color:#085041">Haut-Rhin</div>
+      <div class="stat-value" style="color:#085041">812 mm/an</div>
+      <div class="stat-sub" style="color:#085041">Max 95 mm · Min 40 mm</div>
+    </div><div class="stat" style="background:#FAECE7">
+      <div class="stat-label" style="color:#712B13">France</div>
+      <div class="stat-value" style="color:#712B13">849 mm/an</div>
+      <div class="stat-sub" style="color:#712B13">Max 87 mm · Min 53 mm</div>
+    </div></div>
+<p class="note" id="srcNote">Colmar 2007 vs moyennes 2005–2024.</p>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const M = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+const colmarAnn = {
+  2005:[28,22,38,41,72,58,63,48,42,61,38,34],2006:[35,18,29,55,68,71,82,59,38,48,45,41],
+  2007:[41,32,42,38,58,48,55,61,52,58,62,38],2008:[29,25,35,48,62,55,71,52,48,52,41,32],
+  2009:[22,19,28,38,55,62,78,48,42,61,38,29],2010:[38,28,42,52,78,65,58,72,61,55,48,41],
+  2011:[25,18,32,42,61,52,68,55,38,48,35,28],2012:[32,41,28,55,72,68,61,48,52,62,45,38],
+  2013:[42,32,38,48,65,58,72,55,48,58,52,35],2014:[35,28,42,52,68,62,58,48,61,55,48,41],
+  2015:[22,18,28,38,55,48,68,42,35,48,38,25],2016:[38,32,42,55,72,65,78,52,48,58,45,38],
+  2017:[28,22,32,45,62,55,65,48,42,52,41,32],2018:[18,15,25,38,52,48,58,38,35,42,32,22],
+  2019:[32,25,38,52,68,72,82,61,52,58,48,35],2020:[42,35,45,62,78,68,72,58,52,61,55,41],
+  2021:[35,28,38,48,65,58,68,52,48,55,45,38],2022:[22,18,28,42,55,48,62,38,32,45,35,25],
+  2023:[38,32,42,55,72,65,78,58,52,61,52,41],2024:[35,28,38,52,68,62,72,55,48,58,48,38]
+};
+const hautRhinAnn = {
+  2005:[48,38,52,62,92,85,88,75,62,70,58,50],2006:[55,32,45,72,98,95,105,82,58,68,62,58],
+  2007:[62,48,58,55,85,72,82,88,75,78,82,52],2008:[45,38,52,68,88,78,98,72,68,72,58,48],
+  2009:[38,32,42,55,80,88,102,68,62,80,55,42],2010:[58,42,62,75,108,92,82,98,88,78,68,58],
+  2011:[40,30,48,62,88,75,95,78,55,68,52,42],2012:[50,58,42,78,102,95,88,70,75,85,65,55],
+  2013:[62,48,55,68,92,82,98,78,68,80,72,50],2014:[52,42,62,75,95,88,82,68,85,78,68,58],
+  2015:[35,28,42,55,78,68,95,60,52,68,55,38],2016:[58,48,62,78,102,92,108,74,68,80,65,55],
+  2017:[44,34,48,65,88,78,92,68,60,74,60,48],2018:[28,24,38,55,75,68,82,55,50,60,48,34],
+  2019:[48,38,55,74,96,102,115,88,74,82,68,50],2020:[62,52,68,88,110,96,102,82,74,86,78,58],
+  2021:[52,42,56,70,92,82,96,74,68,78,65,55],2022:[34,28,42,60,78,68,88,54,46,64,50,36],
+  2023:[56,48,62,78,102,92,108,82,74,86,74,58],2024:[52,42,56,74,96,88,102,78,68,82,68,55]
+};
+const franceAnn = {
+  2005:[68,55,65,68,82,70,65,65,70,78,80,74],2006:[72,50,58,80,90,85,88,74,62,72,78,78],
+  2007:[78,62,72,68,82,72,78,82,75,80,86,70],2008:[65,55,62,74,86,78,88,72,72,74,72,62],
+  2009:[58,48,56,62,78,82,90,68,66,78,72,56],2010:[74,58,72,78,98,88,76,88,85,80,78,72],
+  2011:[58,46,60,66,84,74,84,76,62,70,65,56],2012:[65,72,55,80,94,88,80,70,76,84,76,68],
+  2013:[74,58,65,72,90,82,88,76,72,80,78,60],2014:[70,56,70,76,90,84,76,68,82,78,74,68],
+  2015:[52,44,56,62,78,70,86,62,56,68,62,50],2016:[70,60,68,78,96,86,96,72,70,78,72,66],
+  2017:[60,48,58,68,84,76,82,68,62,72,66,58],2018:[44,38,50,60,74,68,76,56,52,60,54,44],
+  2019:[62,50,62,72,88,90,96,80,72,78,70,56],2020:[76,62,72,84,100,88,88,76,72,82,80,66],
+  2021:[66,54,62,68,86,78,84,70,66,72,68,60],2022:[50,42,54,64,76,68,80,56,50,62,56,46],
+  2023:[68,58,68,76,96,86,96,76,72,82,74,62],2024:[64,52,62,72,88,80,88,72,66,76,68,58]
+};
+
+const ALL_YEARS = Object.keys(colmarAnn).map(Number);
+const COLORS  = ['#185FA5','#1D9E75','#D85A30'];
+const BG_STAT = ['#E6F1FB','#E1F5EE','#FAECE7'];
+const FG_STAT = ['#0C447C','#085041','#712B13'];
+const LABELS  = ['Colmar','Haut-Rhin','France'];
+const ALL_ANN = [colmarAnn, hautRhinAnn, franceAnn];
+
+let visible = [true, true, true];
+let view = 'moyenne';
+let chart;
+
+const yrSel  = document.getElementById('yrSel');
+const yrFrom = document.getElementById('yrFrom');
+const yrTo   = document.getElementById('yrTo');
+
+ALL_YEARS.forEach(a => {
+  [yrSel, yrFrom, yrTo].forEach(sel => {
+    const o = document.createElement('option'); o.value = a; o.text = a; sel.appendChild(o);
+  });
+});
+yrSel.value  = 2024;
+yrFrom.value = ALL_YEARS[0];
+yrTo.value   = ALL_YEARS[ALL_YEARS.length - 1];
+
+function getSelectedYears() {
+  const f = parseInt(yrFrom.value), t = parseInt(yrTo.value);
+  return ALL_YEARS.filter(y => y >= Math.min(f,t) && y <= Math.max(f,t));
+}
+function computeMoy(annData, years) {
+  return M.map((_, mi) => {
+    const vals = years.map(y => annData[y][mi]);
+    return Math.round(vals.reduce((s,v)=>s+v,0) / vals.length);
+  });
+}
+function slopeOf(annData, monthIdx) {
+  const yrs = ALL_YEARS;
+  const yVals = yrs.map(a => annData[a][monthIdx]);
+  const n = yrs.length;
+  const sumX  = yrs.reduce((s,v)=>s+v,0);
+  const sumY  = yVals.reduce((s,v)=>s+v,0);
+  const sumXY = yrs.reduce((s,v,i)=>s+v*yVals[i],0);
+  const sumX2 = yrs.reduce((s,v)=>s+v*v,0);
+  return Math.round(((n*sumXY-sumX*sumY)/(n*sumX2-sumX*sumX))*10)/10;
+}
+function trendSeries(annData) { return M.map((_,i) => slopeOf(annData, i)); }
+
+function onPeriodChange() {
+  const n = getSelectedYears().length;
+  document.getElementById('periodTag').textContent = `${n} année${n>1?'s':''}`;
+  render();
+}
+function toggle(i) {
+  visible[i] = !visible[i];
+  document.getElementById('tog'+i).classList.toggle('off');
+  render();
+}
+function setView(v) {
+  view = v;
+  ['moyenne','annee','tendance'].forEach(k =>
+    document.getElementById('vbtn-'+k).classList.toggle('active', k === v)
+  );
+  yrSel.style.display = v === 'annee' ? 'inline-block' : 'none';
+  document.getElementById('periodBar').style.display = v === 'moyenne' ? 'flex' : 'none';
+  render();
+}
+
+function render() {
+  if (chart) { chart.destroy(); chart = null; }
+  const tc = '#888', gc = 'rgba(0,0,0,.07)';
+  const tendNote  = document.getElementById('tendNote');
+  const legendRow = document.getElementById('legendRow');
+  const srcNote   = document.getElementById('srcNote');
+  const statsDiv  = document.getElementById('stats');
+  let datasets = [];
+  let yTickCb = v => v + ' mm';
+
+  tendNote.style.display  = 'none';
+  legendRow.style.display = 'none';
+
+  if (view === 'moyenne') {
+    const years = getSelectedYears();
+    const moys = ALL_ANN.map(ann => computeMoy(ann, years));
+    moys.forEach((data, i) => {
+      if (!visible[i]) return;
+      datasets.push({ type:'line', label:LABELS[i], data, borderColor:COLORS[i], backgroundColor:COLORS[i]+'22', borderWidth:2.5, pointRadius:4, pointHoverRadius:6, fill:i===0, tension:.35 });
+    });
+    renderStats(moys);
+    const f = Math.min(parseInt(yrFrom.value), parseInt(yrTo.value));
+    const t = Math.max(parseInt(yrFrom.value), parseInt(yrTo.value));
+    srcNote.textContent = `Moyennes sur ${years.length} année${years.length>1?'s':''} (${f}–${t}). Sources : Météo-France COLMAR-INRAE · Normales dépt. 68 · Nationale 1991–2020.`;
+
+  } else if (view === 'annee') {
+    const yr = parseInt(yrSel.value);
+    const activeIdx = [0,1,2].filter(i => visible[i]);
+    const barPct = activeIdx.length > 1 ? Math.min(0.9, 0.32 * activeIdx.length) : 0.55;
+    const defs = [
+      { idx:0, label:`Colmar ${yr}`,    data:colmarAnn[yr],                    alpha:'cc' },
+      { idx:1, label:'Haut-Rhin moy.', data:computeMoy(hautRhinAnn, ALL_YEARS), alpha:'99' },
+      { idx:2, label:'France moy.',     data:computeMoy(franceAnn,   ALL_YEARS), alpha:'99' },
+    ];
+    defs.forEach(({ idx, label, data, alpha }) => {
+      if (!visible[idx]) return;
+      datasets.push({ type:'bar', label, data, backgroundColor:COLORS[idx]+alpha, borderRadius:3, borderSkipped:false, categoryPercentage:0.8, barPercentage:barPct });
+    });
+    if (activeIdx.length > 1) {
+      legendRow.style.display = 'flex';
+      legendRow.innerHTML = defs.filter(d=>visible[d.idx]).map(d=>
+        `<span><span class="ldot" style="background:${COLORS[d.idx]}${d.alpha}"></span>${d.label}</span>`).join('');
+    }
+    renderStats(defs.map(d => d.data));
+    srcNote.textContent = `Colmar ${yr} vs moyennes 2005–2024.`;
+
+  } else {
+    tendNote.style.display = 'block';
+    const activeIdx = [0,1,2].filter(i => visible[i]);
+    if (activeIdx.length === 0) { statsDiv.innerHTML = ''; return; }
+    const trends = ALL_ANN.map(trendSeries);
+    activeIdx.forEach(i => {
+      datasets.push({
+        type:'bar', label:LABELS[i], data:trends[i],
+        backgroundColor: trends[i].map(v => v >= 0 ? COLORS[i] : COLORS[i]+'55'),
+        borderRadius:3, borderSkipped:false,
+        categoryPercentage:0.8,
+        barPercentage: activeIdx.length > 1 ? 1/activeIdx.length*1.5 : 0.6,
+      });
+    });
+    if (activeIdx.length > 1) {
+      legendRow.style.display = 'flex';
+      legendRow.innerHTML = activeIdx.map(i =>
+        `<span><span class="ldot" style="background:${COLORS[i]}"></span>${LABELS[i]} <span style="opacity:.55;font-size:11px">(mm/an)</span></span>`
+      ).join('');
+    }
+    statsDiv.innerHTML = activeIdx.map(i => {
+      const t = trends[i];
+      const pos=t.filter(v=>v>0).length, neg=t.filter(v=>v<0).length;
+      const max=Math.max(...t), min=Math.min(...t);
+      return `<div class="stat" style="background:${BG_STAT[i]}">
+        <div class="stat-label" style="color:${FG_STAT[i]}">${LABELS[i]}</div>
+        <div class="stat-value" style="color:${FG_STAT[i]}">${pos} ↑ · ${neg} ↓</div>
+        <div class="stat-sub" style="color:${FG_STAT[i]}">+${max.toFixed(1)} (${M[t.indexOf(max)]}) · ${min.toFixed(1)} (${M[t.indexOf(min)]}) mm/an</div>
+      </div>`;
+    }).join('');
+    srcNote.textContent = 'Pente de régression linéaire mois par mois sur 2005–2024. Barres pleines = hausse, translucides = baisse.';
+    yTickCb = v => (v > 0 ? '+' : '') + v.toFixed(1);
+  }
+
+  chart = new Chart(document.getElementById('ch'), {
+    type:'bar', data:{ labels:M, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{ callbacks:{ label: ctx => {
+          const v = ctx.parsed.y;
+          return view === 'tendance'
+            ? `${ctx.dataset.label}: ${v>0?'+':''}${v.toFixed(1)} mm/an`
+            : `${ctx.dataset.label}: ${Math.round(v)} mm`;
+        }}}
+      },
+      scales:{
+        x:{ grid:{color:gc}, ticks:{color:tc,font:{size:12},autoSkip:false} },
+        y:{ grid:{color:gc}, ticks:{ color:tc,font:{size:12}, callback:yTickCb } }
+      }
+    }
+  });
+}
+
+function renderStats(series) {
+  document.getElementById('stats').innerHTML = series.map((data,i) => {
+    if (!visible[i]||!data) return '';
+    const tot=data.reduce((s,v)=>s+v,0), max=Math.max(...data), min=Math.min(...data);
+    return `<div class="stat" style="background:${BG_STAT[i]}">
+      <div class="stat-label" style="color:${FG_STAT[i]}">${LABELS[i]}</div>
+      <div class="stat-value" style="color:${FG_STAT[i]}">${Math.round(tot)} mm/an</div>
+      <div class="stat-sub" style="color:${FG_STAT[i]}">Max ${Math.round(max)} mm · Min ${Math.round(min)} mm</div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('periodBar').style.display = 'flex';
+render();
+</script>
+
+
+</body></html>
