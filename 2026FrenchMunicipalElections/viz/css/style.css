@@ -427,3 +427,25 @@ canvas { display: block; width: 100%; height: 120px; }
 }
 .leg-bar { height: 6px; border-radius: 3px; margin-bottom: 4px; }
 .leg-labels { display: flex; justify-content: space-between; font-size: 9px; font-family: var(--mono); color: var(--muted); }
+
+/* ── Recherche commune ── */
+#commune-search {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 6px;
+  outline: none;
+}
+#commune-search::placeholder { color: var(--muted); }
+#commune-search:focus { border-color: var(--accent); }
+
+#commune-list-info {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 4px 2px;
+}

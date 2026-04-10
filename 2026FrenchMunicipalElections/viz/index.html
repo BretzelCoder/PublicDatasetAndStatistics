@@ -34,6 +34,24 @@
   <aside class="panel" id="left-panel">
 
     <div class="section">
+      <div class="section-title">Tour de scrutin</div>
+      <div class="filter-list" id="round-filters">
+        <button class="filter-btn active" style="color:var(--accent)" data-tour="1">
+          <span class="dot" style="background:var(--accent)"></span>
+          1er tour
+        </button>
+        <button class="filter-btn" style="color:var(--teal)" data-tour="2">
+          <span class="dot" style="background:var(--teal)"></span>
+          2e tour
+        </button>
+        <button class="filter-btn" style="color:var(--muted)" data-tour="all">
+          <span class="dot" style="background:var(--dim)"></span>
+          Les deux tours
+        </button>
+      </div>
+    </div>
+
+    <div class="section">
       <div class="section-title">Afficher sur la carte</div>
       <div class="filter-list" id="mode-filters">
         <button class="filter-btn active" style="color:var(--orange)" data-mode="abstention">
@@ -80,7 +98,9 @@
 
     <div class="section">
       <div class="section-title">Communes disponibles</div>
+      <input type="search" id="commune-search" placeholder="Rechercher une commune…">
       <div class="commune-list" id="commune-list"></div>
+      <div id="commune-list-info"></div>
     </div>
 
     <div class="section" style="margin-top:auto">

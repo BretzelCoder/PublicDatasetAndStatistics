@@ -32,7 +32,7 @@ const DATA_PATH = '../data/processed/bureaux_vote_final.json';
    DONNÉES DE TEST (fallback si pas de serveur HTTP)
    ══════════════════════════════════════════════════════ */
 
-const SAMPLE_DATA = [{"bv_id":1,"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"0001","inscrits":828,"votants":354,"abstentions":474,"taux_abstention":57.13,"taux_participation":42.75,"exprimes":344,"blancs_nuls":10,"nb_listes":6,"nuances":["LDVG","LREM","LRN","LDVD","LDIV","LECO"],"sortant_present":true,"csp_dominante":"Ouvriers","csp_scores":{"Agriculteurs":2.1,"Artisans/Commerçants":7.8,"Cadres":15.2,"Prof. intermédiaires":14.8,"Employés":18.9,"Ouvriers":19.4,"Retraités":22.1,"Sans activité":20.4},"voix_listes":[110,89,81,51,10,3],"lat":43.29087,"lon":5.36996},{"bv_id":2,"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"0002","inscrits":654,"votants":319,"abstentions":335,"taux_abstention":51.13,"taux_participation":48.78,"exprimes":306,"blancs_nuls":13,"nb_listes":6,"nuances":["LDVG","LREM","LRN","LDVD","LDIV","LECO"],"sortant_present":true,"csp_dominante":"Ouvriers","csp_scores":{"Agriculteurs":2.1,"Artisans/Commerçants":7.8,"Cadres":15.2,"Prof. intermédiaires":14.8,"Employés":18.9,"Ouvriers":19.4,"Retraités":22.1,"Sans activité":20.4},"voix_listes":[80,63,62,40,37,24],"lat":43.30168,"lon":5.35959},{"bv_id":3,"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"0003","inscrits":1465,"votants":773,"abstentions":692,"taux_abstention":47.19,"taux_participation":52.76,"exprimes":728,"blancs_nuls":45,"nb_listes":6,"nuances":["LDVG","LREM","LRN","LDVD","LDIV","LECO"],"sortant_present":true,"csp_dominante":"Ouvriers","csp_scores":{"Agriculteurs":2.1,"Artisans/Commerçants":7.8,"Cadres":15.2,"Prof. intermédiaires":14.8,"Employés":18.9,"Ouvriers":19.4,"Retraités":22.1,"Sans activité":20.4},"voix_listes":[223,211,157,88,25,24],"lat":43.30109,"lon":5.37089},{"bv_id":13,"code_dept":"75","code_commune":"75056","nom_commune":"Paris 11e","num_bv":"0001","inscrits":1229,"votants":813,"abstentions":416,"taux_abstention":33.79,"taux_participation":66.15,"exprimes":779,"blancs_nuls":34,"nb_listes":7,"nuances":["LREM","LGAU","LECO","LRFI","LDVG","LDVD","LDIV"],"sortant_present":false,"csp_dominante":"Cadres","csp_scores":{"Agriculteurs":0.2,"Artisans/Commerçants":6.5,"Cadres":28.4,"Prof. intermédiaires":19.6,"Employés":20.1,"Ouvriers":10.3,"Retraités":18.8,"Sans activité":14.9},"voix_listes":[197,162,145,131,105,24,15],"lat":48.86954,"lon":2.36915},{"bv_id":14,"code_dept":"75","code_commune":"75056","nom_commune":"Paris 11e","num_bv":"0002","inscrits":1680,"votants":1042,"abstentions":638,"taux_abstention":37.94,"taux_participation":62.02,"exprimes":985,"blancs_nuls":57,"nb_listes":7,"nuances":["LREM","LGAU","LECO","LRFI","LDVG","LDVD","LDIV"],"sortant_present":false,"csp_dominante":"Cadres","csp_scores":{"Agriculteurs":0.2,"Artisans/Commerçants":6.5,"Cadres":28.4,"Prof. intermédiaires":19.6,"Employés":20.1,"Ouvriers":10.3,"Retraités":18.8,"Sans activité":14.9},"voix_listes":[290,210,155,122,89,61,58],"lat":48.8636,"lon":2.37734},{"bv_id":21,"code_dept":"69","code_commune":"69123","nom_commune":"Lyon 3e","num_bv":"0001","inscrits":724,"votants":474,"abstentions":250,"taux_abstention":34.47,"taux_participation":65.47,"exprimes":454,"blancs_nuls":20,"nb_listes":5,"nuances":["LREM","LDVG","LECO","LDVD","LDIV"],"sortant_present":true,"csp_dominante":"Cadres","csp_scores":{"Agriculteurs":0.8,"Artisans/Commerçants":7.2,"Cadres":24.1,"Prof. intermédiaires":17.9,"Employés":18.4,"Ouvriers":14.2,"Retraités":20.1,"Sans activité":16.3},"voix_listes":[173,151,89,27,14],"lat":45.75772,"lon":4.83855},{"bv_id":33,"code_dept":"06","code_commune":"06088","nom_commune":"Nice","num_bv":"0001","inscrits":1319,"votants":991,"abstentions":328,"taux_abstention":24.82,"taux_participation":75.13,"exprimes":933,"blancs_nuls":58,"nb_listes":4,"nuances":["LDVD","LREM","LDVG","LDIV"],"sortant_present":true,"csp_dominante":"Retraités","csp_scores":{"Agriculteurs":0.5,"Artisans/Commerçants":8.1,"Cadres":16.2,"Prof. intermédiaires":14.6,"Employés":16.8,"Ouvriers":10.2,"Retraités":31.4,"Sans activité":20.1},"voix_listes":[354,342,195,42],"lat":43.70377,"lon":7.27588},{"bv_id":34,"code_dept":"06","code_commune":"06088","nom_commune":"Nice","num_bv":"0002","inscrits":1143,"votants":867,"abstentions":276,"taux_abstention":24.08,"taux_participation":75.86,"exprimes":849,"blancs_nuls":18,"nb_listes":4,"nuances":["LDVD","LREM","LDVG","LDIV"],"sortant_present":true,"csp_dominante":"Retraités","csp_scores":{"Agriculteurs":0.5,"Artisans/Commerçants":8.1,"Cadres":16.2,"Prof. intermédiaires":14.6,"Employés":16.8,"Ouvriers":10.2,"Retraités":31.4,"Sans activité":20.1},"voix_listes":[310,233,171,135],"lat":43.71988,"lon":7.25047},{"bv_id":50,"code_dept":"59","code_commune":"59350","nom_commune":"Lille","num_bv":"0001","inscrits":972,"votants":666,"abstentions":306,"taux_abstention":31.47,"taux_participation":68.51,"exprimes":652,"blancs_nuls":14,"nb_listes":7,"nuances":["LDVG","LRFI","LREM","LECO","LDVD","LDIV","LGAU"],"sortant_present":true,"csp_dominante":"Ouvriers","csp_scores":{"Agriculteurs":1.1,"Artisans/Commerçants":7.1,"Cadres":13.4,"Prof. intermédiaires":14.2,"Employés":19.8,"Ouvriers":24.1,"Retraités":22.4,"Sans activité":20.8},"voix_listes":[153,136,134,67,67,58,37],"lat":50.62425,"lon":3.04476},{"bv_id":51,"code_dept":"59","code_commune":"59350","nom_commune":"Lille","num_bv":"0002","inscrits":639,"votants":329,"abstentions":310,"taux_abstention":48.48,"taux_participation":51.48,"exprimes":310,"blancs_nuls":19,"nb_listes":7,"nuances":["LDVG","LRFI","LREM","LECO","LDVD","LDIV","LGAU"],"sortant_present":true,"csp_dominante":"Ouvriers","csp_scores":{"Agriculteurs":1.1,"Artisans/Commerçants":7.1,"Cadres":13.4,"Prof. intermédiaires":14.2,"Employés":19.8,"Ouvriers":24.1,"Retraités":22.4,"Sans activité":20.8},"voix_listes":[127,108,31,28,8,5,3],"lat":50.63163,"lon":3.04946},{"bv_id":71,"code_dept":"48","code_commune":"48095","nom_commune":"Mende","num_bv":"0001","inscrits":1112,"votants":742,"abstentions":370,"taux_abstention":33.27,"taux_participation":66.7,"exprimes":708,"blancs_nuls":34,"nb_listes":2,"nuances":["LDVD","LDIV"],"sortant_present":true,"csp_dominante":"Agriculteurs","csp_scores":{"Agriculteurs":12.4,"Artisans/Commerçants":8.4,"Cadres":8.4,"Prof. intermédiaires":12.8,"Employés":14.8,"Ouvriers":10.2,"Retraités":28.4,"Sans activité":24.1},"voix_listes":[421,287],"lat":44.50991,"lon":3.50884},{"bv_id":72,"code_dept":"48","code_commune":"48095","nom_commune":"Mende","num_bv":"0002","inscrits":1151,"votants":809,"abstentions":342,"taux_abstention":29.7,"taux_participation":70.28,"exprimes":775,"blancs_nuls":34,"nb_listes":2,"nuances":["LDVD","LDIV"],"sortant_present":true,"csp_dominante":"Agriculteurs","csp_scores":{"Agriculteurs":12.4,"Artisans/Commerçants":8.4,"Cadres":8.4,"Prof. intermédiaires":12.8,"Employés":14.8,"Ouvriers":10.2,"Retraités":28.4,"Sans activité":24.1},"voix_listes":[631,144],"lat":44.51988,"lon":3.49917}];
+const SAMPLE_DATA = [{"bv_id":1,"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"0001","inscrits":828,"votants":354,"abstentions":474,"taux_abstention":57.13,"taux_participation":42.75,"exprimes":344,"blancs_nuls":10,"nb_listes":6,"nuances":["LDVG","LREM","LRN","LDVD","LDIV","LECO"],"sortant_present":true,"csp_dominante":"Ouvriers","csp_scores":{"Agriculteurs":2.1,"Artisans/Commerçants":7.8,"Cadres":15.2,"Prof. intermédiaires":14.8,"Employés":18.9,"Ouvriers":19.4,"Retraités":22.1,"Sans activité":20.4},"voix_listes":[110,89,81,51,10,3],"lat":43.29087,"lon":5.36996,"tour":1},{"bv_id":2,"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"0002","inscrits":654,"votants":319,"abstentions":335,"taux_abstention":51.13,"taux_participation":48.78,"exprimes":306,"blancs_nuls":13,"nb_listes":6,"nuances":["LDVG","LREM","LRN","LDVD","LDIV","LECO"],"sortant_present":true,"csp_dominante":"Ouvriers","csp_scores":{"Agriculteurs":2.1,"Artisans/Commerçants":7.8,"Cadres":15.2,"Prof. intermédiaires":14.8,"Employés":18.9,"Ouvriers":19.4,"Retraités":22.1,"Sans activité":20.4},"voix_listes":[80,63,62,40,37,24],"lat":43.30168,"lon":5.35959,"tour":1},{"bv_id":3,"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"0003","inscrits":1465,"votants":773,"abstentions":692,"taux_abstention":47.19,"taux_participation":52.76,"exprimes":728,"blancs_nuls":45,"nb_listes":6,"nuances":["LDVG","LREM","LRN","LDVD","LDIV","LECO"],"sortant_present":true,"csp_dominante":"Ouvriers","csp_scores":{"Agriculteurs":2.1,"Artisans/Commerçants":7.8,"Cadres":15.2,"Prof. intermédiaires":14.8,"Employés":18.9,"Ouvriers":19.4,"Retraités":22.1,"Sans activité":20.4},"voix_listes":[223,211,157,88,25,24],"lat":43.30109,"lon":5.37089,"tour":1},{"bv_id":13,"code_dept":"75","code_commune":"75056","nom_commune":"Paris 11e","num_bv":"0001","inscrits":1229,"votants":813,"abstentions":416,"taux_abstention":33.79,"taux_participation":66.15,"exprimes":779,"blancs_nuls":34,"nb_listes":7,"nuances":["LREM","LGAU","LECO","LRFI","LDVG","LDVD","LDIV"],"sortant_present":false,"csp_dominante":"Cadres","csp_scores":{"Agriculteurs":0.2,"Artisans/Commerçants":6.5,"Cadres":28.4,"Prof. intermédiaires":19.6,"Employés":20.1,"Ouvriers":10.3,"Retraités":18.8,"Sans activité":14.9},"voix_listes":[197,162,145,131,105,24,15],"lat":48.86954,"lon":2.36915,"tour":1},{"bv_id":14,"code_dept":"75","code_commune":"75056","nom_commune":"Paris 11e","num_bv":"0002","inscrits":1680,"votants":1042,"abstentions":638,"taux_abstention":37.94,"taux_participation":62.02,"exprimes":985,"blancs_nuls":57,"nb_listes":7,"nuances":["LREM","LGAU","LECO","LRFI","LDVG","LDVD","LDIV"],"sortant_present":false,"csp_dominante":"Cadres","csp_scores":{"Agriculteurs":0.2,"Artisans/Commerçants":6.5,"Cadres":28.4,"Prof. intermédiaires":19.6,"Employés":20.1,"Ouvriers":10.3,"Retraités":18.8,"Sans activité":14.9},"voix_listes":[290,210,155,122,89,61,58],"lat":48.8636,"lon":2.37734,"tour":1},{"bv_id":21,"code_dept":"69","code_commune":"69123","nom_commune":"Lyon 3e","num_bv":"0001","inscrits":724,"votants":474,"abstentions":250,"taux_abstention":34.47,"taux_participation":65.47,"exprimes":454,"blancs_nuls":20,"nb_listes":5,"nuances":["LREM","LDVG","LECO","LDVD","LDIV"],"sortant_present":true,"csp_dominante":"Cadres","csp_scores":{"Agriculteurs":0.8,"Artisans/Commerçants":7.2,"Cadres":24.1,"Prof. intermédiaires":17.9,"Employés":18.4,"Ouvriers":14.2,"Retraités":20.1,"Sans activité":16.3},"voix_listes":[173,151,89,27,14],"lat":45.75772,"lon":4.83855,"tour":1},{"bv_id":33,"code_dept":"06","code_commune":"06088","nom_commune":"Nice","num_bv":"0001","inscrits":1319,"votants":991,"abstentions":328,"taux_abstention":24.82,"taux_participation":75.13,"exprimes":933,"blancs_nuls":58,"nb_listes":4,"nuances":["LDVD","LREM","LDVG","LDIV"],"sortant_present":true,"csp_dominante":"Retraités","csp_scores":{"Agriculteurs":0.5,"Artisans/Commerçants":8.1,"Cadres":16.2,"Prof. intermédiaires":14.6,"Employés":16.8,"Ouvriers":10.2,"Retraités":31.4,"Sans activité":20.1},"voix_listes":[354,342,195,42],"lat":43.70377,"lon":7.27588,"tour":2},{"bv_id":34,"code_dept":"06","code_commune":"06088","nom_commune":"Nice","num_bv":"0002","inscrits":1143,"votants":867,"abstentions":276,"taux_abstention":24.08,"taux_participation":75.86,"exprimes":849,"blancs_nuls":18,"nb_listes":4,"nuances":["LDVD","LREM","LDVG","LDIV"],"sortant_present":true,"csp_dominante":"Retraités","csp_scores":{"Agriculteurs":0.5,"Artisans/Commerçants":8.1,"Cadres":16.2,"Prof. intermédiaires":14.6,"Employés":16.8,"Ouvriers":10.2,"Retraités":31.4,"Sans activité":20.1},"voix_listes":[310,233,171,135],"lat":43.71988,"lon":7.25047,"tour":2},{"bv_id":50,"code_dept":"59","code_commune":"59350","nom_commune":"Lille","num_bv":"0001","inscrits":972,"votants":666,"abstentions":306,"taux_abstention":31.47,"taux_participation":68.51,"exprimes":652,"blancs_nuls":14,"nb_listes":7,"nuances":["LDVG","LRFI","LREM","LECO","LDVD","LDIV","LGAU"],"sortant_present":true,"csp_dominante":"Ouvriers","csp_scores":{"Agriculteurs":1.1,"Artisans/Commerçants":7.1,"Cadres":13.4,"Prof. intermédiaires":14.2,"Employés":19.8,"Ouvriers":24.1,"Retraités":22.4,"Sans activité":20.8},"voix_listes":[153,136,134,67,67,58,37],"lat":50.62425,"lon":3.04476,"tour":2},{"bv_id":51,"code_dept":"59","code_commune":"59350","nom_commune":"Lille","num_bv":"0002","inscrits":639,"votants":329,"abstentions":310,"taux_abstention":48.48,"taux_participation":51.48,"exprimes":310,"blancs_nuls":19,"nb_listes":7,"nuances":["LDVG","LRFI","LREM","LECO","LDVD","LDIV","LGAU"],"sortant_present":true,"csp_dominante":"Ouvriers","csp_scores":{"Agriculteurs":1.1,"Artisans/Commerçants":7.1,"Cadres":13.4,"Prof. intermédiaires":14.2,"Employés":19.8,"Ouvriers":24.1,"Retraités":22.4,"Sans activité":20.8},"voix_listes":[127,108,31,28,8,5,3],"lat":50.63163,"lon":3.04946,"tour":2},{"bv_id":71,"code_dept":"48","code_commune":"48095","nom_commune":"Mende","num_bv":"0001","inscrits":1112,"votants":742,"abstentions":370,"taux_abstention":33.27,"taux_participation":66.7,"exprimes":708,"blancs_nuls":34,"nb_listes":2,"nuances":["LDVD","LDIV"],"sortant_present":true,"csp_dominante":"Agriculteurs","csp_scores":{"Agriculteurs":12.4,"Artisans/Commerçants":8.4,"Cadres":8.4,"Prof. intermédiaires":12.8,"Employés":14.8,"Ouvriers":10.2,"Retraités":28.4,"Sans activité":24.1},"voix_listes":[421,287],"lat":44.50991,"lon":3.50884,"tour":2},{"bv_id":72,"code_dept":"48","code_commune":"48095","nom_commune":"Mende","num_bv":"0002","inscrits":1151,"votants":809,"abstentions":342,"taux_abstention":29.7,"taux_participation":70.28,"exprimes":775,"blancs_nuls":34,"nb_listes":2,"nuances":["LDVD","LDIV"],"sortant_present":true,"csp_dominante":"Agriculteurs","csp_scores":{"Agriculteurs":12.4,"Artisans/Commerçants":8.4,"Cadres":8.4,"Prof. intermédiaires":12.8,"Employés":14.8,"Ouvriers":10.2,"Retraités":28.4,"Sans activité":24.1},"voix_listes":[631,144],"lat":44.51988,"lon":3.49917,"tour":2}];
 
 /* ══════════════════════════════════════════════════════
    ÉTAT GLOBAL
@@ -42,6 +42,7 @@ let RAW = [];           // données brutes (tous les BV)
 let COMMUNES = {};      // index par code_commune
 let mapMode = 'abstention';
 let cspFilter = 'all';
+let tourFilter = '1';   // '1', '2', ou 'all'
 let selectedCommune = null;
 let selectedBV = null;
 let markers = {};
@@ -56,14 +57,15 @@ async function loadData() {
     const res = await fetch(DATA_PATH);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     RAW = await res.json();
-    document.getElementById('data-badge').textContent = '✓ Données réelles';
-    document.getElementById('data-badge').style.background = 'rgba(52,208,122,.12)';
-    document.getElementById('data-badge').style.color = 'var(--green)';
-    document.getElementById('data-badge').style.borderColor = 'rgba(52,208,122,.3)';
-  } catch {
+    const badge = document.getElementById('data-badge');
+    badge.textContent = `✓ ${RAW.length.toLocaleString()} bureaux chargés`;
+    badge.style.background = 'rgba(52,208,122,.12)';
+    badge.style.color = 'var(--green)';
+    badge.style.borderColor = 'rgba(52,208,122,.3)';
+  } catch (err) {
     // Pas de serveur HTTP ou fichier absent → données de test
     RAW = SAMPLE_DATA;
-    console.info('Données de test utilisées (ouvrez via Live Server pour les vraies données).');
+    console.warn('Données de test utilisées (erreur :', err.message || err, ')');
   }
   buildCommuneIndex();
   initMap();
@@ -74,7 +76,8 @@ async function loadData() {
 
 function buildCommuneIndex() {
   COMMUNES = {};
-  RAW.forEach(b => {
+  const activeRaw = tourFilter === 'all' ? RAW : RAW.filter(b => String(b.tour ?? 1) === tourFilter);
+  activeRaw.forEach(b => {
     if (!COMMUNES[b.code_commune]) {
       COMMUNES[b.code_commune] = {
         code:       b.code_commune,
@@ -135,20 +138,87 @@ function cspColor(csp) {
    CARTE LEAFLET
    ══════════════════════════════════════════════════════ */
 
+function findNearestCommune(lat, lon) {
+  let best = null, bestDist = Infinity;
+  Object.values(COMMUNES).forEach(c => {
+    const dlat = c.lat - lat, dlon = c.lon - lon;
+    const d = dlat * dlat + dlon * dlon;
+    if (d < bestDist) { bestDist = d; best = c; }
+  });
+  return best;
+}
+
+function centerMapOn(lat, lon) {
+  const kmLat = 50 / 111.32;
+  const kmLon = 50 / (111.32 * Math.cos(lat * Math.PI / 180));
+  map.fitBounds([
+    [lat - kmLat, lon - kmLon],
+    [lat + kmLat, lon + kmLon]
+  ]);
+  drawCommuneMarkers();
+
+  // Select the nearest commune without flying (map is already centered)
+  const nearest = findNearestCommune(lat, lon);
+  if (nearest) {
+    selectedCommune = nearest.code;
+    selectedBV = null;
+    renderCommuneList();
+    drawBVMarkers(nearest);
+    renderCommuneView(nearest);
+  }
+}
+
 function initMap() {
+  const COLMAR = [48.0792, 7.3558];
+
   map = L.map('map', { zoomControl: true, attributionControl: false })
-    .setView([46.5, 2.5], 5);
+    .setView(COLMAR, 10);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 })
     .addTo(map);
 
+  map.on('moveend zoomend', () => {
+    if (selectedCommune) {
+      drawBVMarkers(COMMUNES[selectedCommune]);
+    } else {
+      drawCommuneMarkers();
+    }
+  });
   drawCommuneMarkers();
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        // Use GPS only if position is within metropolitan France
+        if (lat >= 41.3 && lat <= 51.1 && lon >= -5.1 && lon <= 9.6) {
+          centerMapOn(lat, lon);
+        } else {
+          centerMapOn(COLMAR[0], COLMAR[1]);
+        }
+      },
+      () => centerMapOn(COLMAR[0], COLMAR[1]),
+      { timeout: 5000 }
+    );
+  } else {
+    centerMapOn(COLMAR[0], COLMAR[1]);
+  }
 }
+
+const MAX_MARKERS = 800;
 
 function drawCommuneMarkers() {
   clearMarkers();
-  const subset = Object.values(COMMUNES)
-    .filter(c => cspFilter === 'all' || c.csp === cspFilter);
+  const bounds = map.getBounds();
+  const all = Object.values(COMMUNES)
+    .filter(c => (cspFilter === 'all' || c.csp === cspFilter)
+              && bounds.contains([c.lat, c.lon]));
+
+  // Limiter le nombre de marqueurs pour éviter de geler le navigateur
+  const subset = all.length > MAX_MARKERS
+    ? all.sort((a, b) => b.inscrits - a.inscrits).slice(0, MAX_MARKERS)
+    : all;
 
   subset.forEach(c => {
     const m = L.circleMarker([c.lat, c.lon], {
@@ -551,7 +621,7 @@ function renderBVView(b, c) {
     <div>
       <div class="section-title">Résultats par liste</div>
       <div class="voix-bars" style="margin-top:8px">
-        ${b.voix_listes.map((v, i) => `
+        ${b.voix_listes.slice(0, b.nb_listes).map((v, i) => `
         <div class="vb-row">
           <span class="vb-lbl">L${i + 1}</span>
           <div class="vb-track">
@@ -655,10 +725,16 @@ function drawScatter(communes) {
    PANNEAU GAUCHE — LISTE COMMUNES & STATS
    ══════════════════════════════════════════════════════ */
 
+const LIST_PAGE = 150;
+
 function renderCommuneList() {
-  const subset = Object.values(COMMUNES)
-    .filter(c => cspFilter === 'all' || c.csp === cspFilter)
+  const query = (document.getElementById('commune-search')?.value || '').toLowerCase().trim();
+  const all = Object.values(COMMUNES)
+    .filter(c => (cspFilter === 'all' || c.csp === cspFilter)
+              && (!query || c.nom.toLowerCase().includes(query)))
     .sort((a, b) => a.nom.localeCompare(b.nom));
+
+  const subset = all.slice(0, LIST_PAGE);
 
   document.getElementById('commune-list').innerHTML = subset.map(c => `
     <div class="commune-item ${selectedCommune === c.code ? 'active' : ''}"
@@ -667,6 +743,13 @@ function renderCommuneList() {
       <span class="ci-name">${c.nom}</span>
       <span class="ci-abs">${c.taux_abstention.toFixed(1)}%</span>
     </div>`).join('');
+
+  const info = document.getElementById('commune-list-info');
+  if (info) {
+    info.textContent = all.length > LIST_PAGE
+      ? `${subset.length} affichées sur ${all.length.toLocaleString()} — affinez la recherche`
+      : `${all.length.toLocaleString()} commune${all.length > 1 ? 's' : ''}`;
+  }
 }
 
 function updateGlobalStats() {
@@ -724,7 +807,35 @@ function setCSP(csp) {
   ), 50);
 }
 
+function setTour(tour) {
+  tourFilter = tour;
+  document.querySelectorAll('#round-filters .filter-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tour === tour);
+  });
+  map.stop(); // annule toute animation fly en cours
+  const prevCommune = selectedCommune;
+  selectedBV = null;
+  buildCommuneIndex();
+
+  if (prevCommune && COMMUNES[prevCommune]) {
+    // La commune sélectionnée existe dans le nouveau tour — on la réaffiche
+    selectedCommune = prevCommune;
+    drawBVMarkers(COMMUNES[prevCommune]);
+    renderCommuneList();
+    renderCommuneView(COMMUNES[prevCommune]);
+  } else {
+    // La commune n'existe pas dans ce tour (ou rien n'était sélectionné)
+    selectedCommune = null;
+    drawCommuneMarkers();
+    renderCommuneList();
+    updateGlobalStats();
+    renderNationalView();
+  }
+}
+
 /* ── Branchement des événements (data-* attributes, pas de onclick inline) ── */
+document.getElementById('commune-search').addEventListener('input', renderCommuneList);
+
 document.getElementById('mode-filters').addEventListener('click', e => {
   const btn = e.target.closest('[data-mode]');
   if (btn) setMapMode(btn.dataset.mode);
@@ -733,6 +844,11 @@ document.getElementById('mode-filters').addEventListener('click', e => {
 document.getElementById('csp-filters').addEventListener('click', e => {
   const btn = e.target.closest('[data-csp]');
   if (btn) setCSP(btn.dataset.csp);
+});
+
+document.getElementById('round-filters').addEventListener('click', e => {
+  const btn = e.target.closest('[data-tour]');
+  if (btn) setTour(btn.dataset.tour);
 });
 
 document.getElementById('breadcrumb').addEventListener('click', e => {

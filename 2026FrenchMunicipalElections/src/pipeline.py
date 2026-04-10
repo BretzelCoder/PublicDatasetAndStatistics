@@ -21,6 +21,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -92,6 +93,46 @@ DATAGOUV_FILES = {
     ),
 }
 
+def fetch_commune_coords(dest: Path) -> bool:
+    """
+    Télécharge les centroïdes de toutes les communes françaises via l'API officielle
+    geo.api.gouv.fr et les écrit dans dest (coords_communes.csv).
+    Retourne True si succès.
+    """
+    try:
+        import requests
+    except ImportError:
+        log.warning("requests non installé — impossible de télécharger les coordonnées.")
+        return False
+
+    url = "https://geo.api.gouv.fr/communes?fields=code,centre&format=json&geometry=centre"
+    log.info(f"  ↓ Téléchargement des centroïdes communes depuis geo.api.gouv.fr…")
+    try:
+        r = requests.get(url, timeout=60)
+        r.raise_for_status()
+        communes = r.json()
+        rows = []
+        for c in communes:
+            code = str(c.get("code", "")).zfill(5)
+            centre = c.get("centre", {})
+            coords_list = centre.get("coordinates", [None, None])
+            if coords_list and coords_list[0] is not None:
+                rows.append({"COG": code, "lat": coords_list[1], "lon": coords_list[0]})
+        if not rows:
+            log.error("  ✗ Aucune coordonnée récupérée depuis l'API.")
+            return False
+        import csv
+        with open(dest, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=["COG", "lat", "lon"], delimiter=";")
+            writer.writeheader()
+            writer.writerows(rows)
+        log.info(f"  ✓ {len(rows)} communes écrites dans {dest.name}")
+        return True
+    except Exception as e:
+        log.error(f"  ✗ Échec récupération coordonnées : {e}")
+        return False
+
+
 def download_files(data_dir: Path) -> None:
     """Télécharge les fichiers sources depuis data.gouv.fr si absents."""
     try:
@@ -156,9 +197,56 @@ def normalize_cog(series: pd.Series) -> pd.Series:
     return series.astype(str).str.strip().str.zfill(5)
 
 
+def _wide_to_long_t1(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Convertit un fichier T1 en format large (colonnes "Numéro de panneau N", "Voix N"…)
+    vers le format long attendu par le pipeline (une ligne par bureau × liste).
+    Les colonnes de base doivent déjà être renommées avant l'appel.
+    """
+    id_cols = [c for c in [
+        "Code du département", "Libellé du département",
+        "Code de la commune", "Libellé de la commune", "Code du b/vote",
+        "Inscrits", "Abstentions", "Votants", "Exprimés", "Blancs", "Nuls",
+    ] if c in df.columns]
+
+    list_nums = sorted({
+        int(m.group(1))
+        for c in df.columns
+        for m in [re.match(r"Num[eé]ro de panneau (\d+)$", c)]
+        if m
+    })
+
+    rows = []
+    for n in list_nums:
+        panneau_col = f"Numéro de panneau {n}"
+        voix_col    = f"Voix {n}"
+        nuance_col  = f"Nuance liste {n}"
+
+        if voix_col not in df.columns:
+            continue
+
+        # Garder uniquement les bureaux où cette liste est présente
+        if panneau_col in df.columns:
+            mask = df[panneau_col].notna() & (df[panneau_col].astype(str).str.strip() != "")
+        else:
+            mask = df[voix_col].notna() & (df[voix_col].astype(str).str.strip() != "")
+
+        if mask.sum() == 0:
+            continue
+
+        sub = df.loc[mask, id_cols].copy()
+        sub["N°Liste"] = df.loc[mask, panneau_col] if panneau_col in df.columns else n
+        sub["Voix"]    = df.loc[mask, voix_col]
+        if nuance_col in df.columns:
+            sub["Nuance Liste"] = df.loc[mask, nuance_col]
+
+        rows.append(sub)
+
+    return pd.concat(rows, ignore_index=True) if rows else df
+
+
 def load_t1(path: Path) -> pd.DataFrame:
     df = load_csv(path)
-    df = clean_numeric(df, NUMERIC_T1)
 
     # Normalisation des noms de colonnes (le Ministère les change parfois légèrement)
     rename_map = {
@@ -168,12 +256,19 @@ def load_t1(path: Path) -> pd.DataFrame:
         "Code commune":                "Code de la commune",
         "Libellé commune":             "Libellé de la commune",
         "Code bureau":                 "Code du b/vote",
+        "Code BV":                     "Code du b/vote",
         "NumeroListe":                 "N°Liste",
         "NuanceListe":                 "Nuance Liste",
         "Libellé Abrégé de la liste":  "Libellé Abrégé Liste",
         "Nom tête de liste":           "Nom Tête de Liste",
     }
     df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
+
+    # Format large (Ministère actuel) → format long
+    if any(re.match(r"Num[eé]ro de panneau \d+$", c) for c in df.columns):
+        df = _wide_to_long_t1(df)
+
+    df = clean_numeric(df, NUMERIC_T1)
 
     # Colonnes obligatoires
     required = ["Code de la commune", "Code du b/vote", "Inscrits",
@@ -194,10 +289,14 @@ def load_listes(path: Path) -> pd.DataFrame:
     df = load_csv(path)
     rename_map = {
         "Code commune":     "Code de la commune",
+        "Code BV":          "Code du b/vote",
         "NumeroListe":      "N°Liste",
         "NuanceListe":      "Nuance Liste",
     }
     df = df.rename(columns={k: v for k, v in rename_map.items() if k in df.columns})
+    # Format large → long (réutilise le même helper que load_t1)
+    if any(re.match(r"Num[eé]ro de panneau \d+$", c) for c in df.columns):
+        df = _wide_to_long_t1(df)
     df["COG"] = normalize_cog(df["Code de la commune"])
     df["N°Liste"] = pd.to_numeric(df.get("N°Liste", pd.Series(dtype=float)), errors="coerce").fillna(0).astype(int)
     return df
@@ -262,9 +361,9 @@ def aggregate_bv(df_t1: pd.DataFrame) -> pd.DataFrame:
         .reset_index()
     )
 
-    bv_meta["taux_abstention"]    = (bv_meta["Abstentions"] / bv_meta["Inscrits"].replace(0, np.nan) * 100).round(2)
-    bv_meta["taux_participation"] = (bv_meta["Votants"]     / bv_meta["Inscrits"].replace(0, np.nan) * 100).round(2)
-    bv_meta["taux_exprimes"]      = (bv_meta["Exprimés"]    / bv_meta["Votants"].replace(0, np.nan)  * 100).round(2)
+    bv_meta["taux_abstention"]    = (bv_meta["Abstentions"] / bv_meta["Inscrits"].replace(0, np.nan) * 100).round(2).fillna(0)
+    bv_meta["taux_participation"] = (bv_meta["Votants"]     / bv_meta["Inscrits"].replace(0, np.nan) * 100).round(2).fillna(0)
+    bv_meta["taux_exprimes"]      = (bv_meta["Exprimés"]    / bv_meta["Votants"].replace(0, np.nan)  * 100).round(2).fillna(0)
     bv_meta["nb_listes"]          = df_t1.groupby(bv_cols)["N°Liste"].max().values
 
     # Voix par liste → pivot
@@ -420,6 +519,15 @@ def enrich_coords(df_bv: pd.DataFrame, coords: dict, rng: np.random.Generator) -
 #  ÉTAPE 4 — EXPORT JSON
 # ─────────────────────────────────────────────────────────────
 
+def _safe_float(v, default: float = 0.0) -> float:
+    """Convertit en float en remplaçant NaN/Inf par default (évite JSON invalide)."""
+    try:
+        f = float(v)
+        return default if (np.isnan(f) or np.isinf(f)) else f
+    except (TypeError, ValueError):
+        return default
+
+
 def export_json(df_bv: pd.DataFrame, output_dir: Path) -> None:
     """Exporte le JSON final compatible avec la carte interactive."""
     log.info("Export JSON…")
@@ -428,6 +536,7 @@ def export_json(df_bv: pd.DataFrame, output_dir: Path) -> None:
     for i, row in df_bv.iterrows():
         rec = {
             "bv_id":          int(i + 1),
+            "tour":           int(row.get("tour", 1)),
             "code_dept":      str(row.get("Code du département", "")).strip(),
             "code_commune":   str(row["COG"]),
             "nom_commune":    str(row.get("Libellé de la commune", "")).strip(),
@@ -435,8 +544,8 @@ def export_json(df_bv: pd.DataFrame, output_dir: Path) -> None:
             "inscrits":       int(row.get("Inscrits", 0)),
             "votants":        int(row.get("Votants", 0)),
             "abstentions":    int(row.get("Abstentions", 0)),
-            "taux_abstention": float(row.get("taux_abstention", 0)),
-            "taux_participation": float(row.get("taux_participation", 0)),
+            "taux_abstention":    _safe_float(row.get("taux_abstention", 0)),
+            "taux_participation": _safe_float(row.get("taux_participation", 0)),
             "exprimes":       int(row.get("Exprimés", 0)),
             "blancs_nuls":    int(row.get("Blancs", 0)) + int(row.get("Nuls", 0)),
             "nb_listes":      int(row.get("nb_listes", 0)),
@@ -445,8 +554,8 @@ def export_json(df_bv: pd.DataFrame, output_dir: Path) -> None:
             "csp_dominante":  str(row.get("csp_dominante", "Inconnue")),
             "csp_scores":     row.get("csp_scores", {}),
             "voix_listes":    [int(v) for v in row.get("voix_listes", [])],
-            "lat":            float(row.get("lat", 46.5)),
-            "lon":            float(row.get("lon", 2.3)),
+            "lat":            _safe_float(row.get("lat", 46.5), 46.5),
+            "lon":            _safe_float(row.get("lon",  2.3),  2.3),
         }
         records.append(rec)
 
@@ -458,9 +567,9 @@ def export_json(df_bv: pd.DataFrame, output_dir: Path) -> None:
         json.dump(records, f, ensure_ascii=False, separators=(",", ":"))
     log.info(f"  → {out_json}  ({out_json.stat().st_size / 1024:.0f} Ko)")
 
-    # CSV de synthèse par commune (utile pour analyses complémentaires)
+    # CSV de synthèse par commune et par tour
     commune_agg = (
-        df_bv.groupby(["COG", "Libellé de la commune"])
+        df_bv.groupby(["tour", "COG", "Libellé de la commune"])
         .agg(
             nb_bv         =("Code du b/vote", "count"),
             inscrits      =("Inscrits", "sum"),
@@ -522,7 +631,9 @@ def main(data_dir: str, output_dir: str, download: bool = False, seed: int = 42)
     # 1. Chargement
     log.info("\n[1] Chargement des sources…")
 
-    path_t1       = data_dir / "resultats_t1_bureaux.csv"
+    # listes_candidates_t1.csv contient les résultats T1 par bureau (format large Ministère)
+    path_t1       = data_dir / "listes_candidates_t1.csv"
+    path_t2       = data_dir / "resultats_t2_bureaux.csv"   # optionnel
     path_listes   = data_dir / "listes_candidates_t1.csv"
     path_sortants = data_dir / "sortants_rne.csv"
     path_insee    = data_dir / "insee_csp_communes.csv"
@@ -540,19 +651,35 @@ def main(data_dir: str, output_dir: str, download: bool = False, seed: int = 42)
     df_insee    = load_insee(path_insee)
 
     coords = {}
+    if not path_coords.exists():
+        log.info("  coords_communes.csv absent → tentative de récupération automatique…")
+        fetch_commune_coords(path_coords)
     if path_coords.exists():
         coords = load_coords(path_coords)
         log.info(f"  Coordonnées chargées pour {len(coords)} communes")
     else:
-        log.info("  coords_communes.csv absent → coordonnées approximatives utilisées")
+        log.warning("  Coordonnées indisponibles → positions approximatives (centre France)")
 
     # 2. Agrégation BV
     log.info("\n[2] Agrégation par bureau de vote…")
-    df_bv = aggregate_bv(df_t1)
+    df_bv_t1 = aggregate_bv(df_t1)
+    df_bv_t1["tour"] = 1
+    df_bv_t1 = enrich_listes(df_bv_t1, df_listes)
+
+    if path_t2.exists():
+        log.info("  Chargement T2…")
+        df_t2 = load_t1(path_t2)   # même format que T1
+        df_bv_t2 = aggregate_bv(df_t2)
+        df_bv_t2["tour"] = 2
+        df_bv_t2 = enrich_listes(df_bv_t2, df_t2)   # nuances issues du fichier T2 lui-même
+        df_bv = pd.concat([df_bv_t1, df_bv_t2], ignore_index=True)
+        log.info(f"  T1 : {len(df_bv_t1)} BV  |  T2 : {len(df_bv_t2)} BV  |  Total : {len(df_bv)} BV")
+    else:
+        log.warning(f"  {path_t2.name} absent — seul le T1 sera traité")
+        df_bv = df_bv_t1
 
     # 3. Enrichissement
     log.info("\n[3] Enrichissement…")
-    df_bv = enrich_listes(df_bv, df_listes)
     df_bv = enrich_sortants(df_bv, df_sortants)
     df_bv = enrich_csp(df_bv, df_insee)
     df_bv = enrich_coords(df_bv, coords, rng)
