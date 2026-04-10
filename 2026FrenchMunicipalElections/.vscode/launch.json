@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Pipeline — données de test",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/pipeline.py",
+      "args": [
+        "--data-dir", "${workspaceFolder}/data/raw",
+        "--output",   "${workspaceFolder}/data/processed"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Pipeline — téléchargement + prod",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/src/pipeline.py",
+      "args": [
+        "--data-dir", "${workspaceFolder}/data/raw",
+        "--output",   "${workspaceFolder}/data/processed",
+        "--download"
+      ],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

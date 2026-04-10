@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Élections Municipales 2026 — Carte interactive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg0: #090d14;
+  --bg1: #0f1520;
+  --bg2: #151e2e;
+  --bg3: #1c2840;
+  --bg4: #233050;
+  --border: rgba(120,160,255,0.10);
+  --border2: rgba(120,160,255,0.18);
+  --text: #dde4f0;
+  --muted: #6a7a9a;
+  --dim: #3a4860;
+  --accent: #3d8bff;
+  --accent-glow: rgba(61,139,255,0.25);
+  --green: #34d07a;
+  --red: #f05050;
+  --yellow: #f5c842;
+  --orange: #f58c42;
+  --purple: #9b7aff;
+  --teal: #2dd4c0;
+  --f: 'Space Grotesk', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+html, body { height: 100%; overflow: hidden; background: var(--bg0); color: var(--text); font-family: var(--f); font-size: 13px; }
+
+/* ── LAYOUT ── */
+.app { display: grid; grid-template-rows: 48px 1fr; grid-template-columns: 280px 1fr 260px; height: 100vh; gap: 1px; background: var(--border); }
+header { grid-column: 1/-1; background: var(--bg1); display: flex; align-items: center; padding: 0 18px; gap: 14px; border-bottom: 1px solid var(--border2); }
+.logo { font-size: 15px; font-weight: 700; letter-spacing: -.02em; color: #fff; }
+.logo span { color: var(--accent); }
+.badge { font-size: 9px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; background: rgba(61,139,255,.18); color: var(--accent); padding: 3px 8px; border-radius: 20px; border: 1px solid rgba(61,139,255,.3); }
+.badge.sim { background: rgba(245,200,66,.12); color: var(--yellow); border-color: rgba(245,200,66,.3); }
+.nav-hint { margin-left: auto; font-size: 10px; color: var(--muted); font-family: var(--mono); display: flex; align-items: center; gap: 8px; }
+.nav-hint kbd { background: var(--bg3); border: 1px solid var(--border2); border-radius: 4px; padding: 1px 5px; font-size: 9px; }
+
+/* ── SIDE PANELS ── */
+.panel { background: var(--bg1); overflow-y: auto; display: flex; flex-direction: column; }
+.panel::-webkit-scrollbar { width: 3px; } .panel::-webkit-scrollbar-thumb { background: var(--bg4); }
+
+.section { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.section-title { font-size: 9px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+
+/* ── BREADCRUMB ── */
+.breadcrumb { display: flex; align-items: center; gap: 6px; padding: 10px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); font-size: 11px; min-height: 36px; flex-shrink: 0; }
+.bc-item { color: var(--muted); cursor: pointer; transition: color .15s; }
+.bc-item:hover { color: var(--text); }
+.bc-item.active { color: var(--accent); font-weight: 500; }
+.bc-sep { color: var(--dim); }
+
+/* ── VIEW MODES ── */
+.mode-tabs { display: flex; gap: 4px; }
+.tab { flex: 1; padding: 6px 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: 11px; font-family: var(--f); cursor: pointer; text-align: center; transition: all .15s; }
+.tab:hover { border-color: var(--border2); color: var(--text); }
+.tab.active { background: var(--bg4); border-color: var(--accent); color: var(--accent); font-weight: 500; }
+
+/* ── METRIC CARDS ── */
+.metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.metric { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.metric.full { grid-column: 1/-1; }
+.m-label { font-size: 9px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.m-val { font-size: 20px; font-weight: 700; font-family: var(--mono); line-height: 1; }
+.m-sub { font-size: 9px; color: var(--muted); margin-top: 3px; }
+.m-delta { font-size: 10px; font-family: var(--mono); }
+.up { color: var(--red); } .down { color: var(--green); }
+
+/* ── FILTER BUTTONS ── */
+.filter-list { display: flex; flex-direction: column; gap: 4px; }
+.filter-btn { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 7px; color: var(--muted); font-family: var(--f); font-size: 11px; cursor: pointer; transition: all .15s; text-align: left; }
+.filter-btn:hover { border-color: var(--border2); color: var(--text); }
+.filter-btn.active { border-color: currentColor; font-weight: 500; }
+.filter-btn.active .dot { box-shadow: 0 0 6px currentColor; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.filter-btn .pct { margin-left: auto; font-family: var(--mono); font-size: 10px; }
+
+/* ── BARS ── */
+.bar-rows { display: flex; flex-direction: column; gap: 5px; }
+.bar-row { display: flex; align-items: center; gap: 6px; font-size: 10px; }
+.bar-lbl { color: var(--muted); width: 60px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { flex: 1; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 2px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+.bar-val { font-family: var(--mono); color: var(--muted); min-width: 34px; text-align: right; }
+
+/* ── SCATTER CANVAS ── */
+canvas { display: block; width: 100%; height: 120px; }
+
+/* ── MAP AREA ── */
+.map-area { position: relative; background: var(--bg0); }
+#map { width: 100%; height: 100%; }
+
+/* ── TOOLTIP ── */
+.map-tooltip {
+  position: absolute; background: var(--bg1); border: 1px solid var(--border2);
+  border-radius: 10px; padding: 12px 14px; pointer-events: none;
+  min-width: 210px; z-index: 1000;
+  opacity: 0; transition: opacity .12s;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6);
+}
+.map-tooltip.show { opacity: 1; }
+.tt-head { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+.tt-name { font-size: 13px; font-weight: 600; }
+.tt-code { font-size: 9px; color: var(--muted); font-family: var(--mono); }
+.tt-row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; }
+.tt-lbl { font-size: 10px; color: var(--muted); }
+.tt-val { font-size: 11px; font-family: var(--mono); font-weight: 500; }
+.tt-tag { font-size: 9px; padding: 2px 6px; border-radius: 10px; font-weight: 600; }
+.tt-tag.yes { background: rgba(52,208,122,.15); color: var(--green); }
+.tt-tag.no  { background: rgba(240,80,80,.12); color: var(--red); }
+.tt-divider { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
+
+/* ── LEGEND ── */
+.map-legend {
+  position: absolute; bottom: 16px; left: 16px; z-index: 999;
+  background: var(--bg1); border: 1px solid var(--border2); border-radius: 10px;
+  padding: 10px 12px; min-width: 160px;
+}
+.leg-title { font-size: 9px; color: var(--muted); margin-bottom: 6px; letter-spacing: .06em; text-transform: uppercase; }
+.leg-bar { height: 6px; border-radius: 3px; margin-bottom: 4px; }
+.leg-labels { display: flex; justify-content: space-between; font-size: 9px; font-family: var(--mono); color: var(--muted); }
+
+/* ── COMMUNE LIST ── */
+.commune-list { display: flex; flex-direction: column; gap: 3px; }
+.commune-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: var(--bg2); border: 1px solid var(--border); border-radius: 7px; cursor: pointer; transition: all .15s; }
+.commune-item:hover, .commune-item.active { border-color: var(--accent); background: var(--bg3); }
+.ci-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ci-name { flex: 1; font-size: 11px; font-weight: 500; }
+.ci-abs { font-size: 10px; font-family: var(--mono); color: var(--muted); }
+
+/* ── BV DETAIL ── */
+.bv-list { display: flex; flex-direction: column; gap: 3px; max-height: 200px; overflow-y: auto; }
+.bv-item { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: var(--bg2); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; transition: all .12s; font-size: 10px; }
+.bv-item:hover, .bv-item.active { border-color: var(--accent); }
+.bv-num { font-family: var(--mono); color: var(--muted); width: 32px; }
+.bv-inscrits { color: var(--muted); margin-left: auto; }
+.bv-abs { font-family: var(--mono); font-weight: 600; min-width: 36px; text-align: right; }
+
+/* ── VOIX CHART ── */
+.voix-bars { display: flex; flex-direction: column; gap: 4px; }
+.vb-row { display: flex; align-items: center; gap: 6px; }
+.vb-lbl { font-size: 9px; color: var(--muted); width: 28px; flex-shrink: 0; font-family: var(--mono); }
+.vb-track { flex: 1; height: 14px; background: var(--bg3); border-radius: 3px; overflow: hidden; position: relative; }
+.vb-fill { height: 100%; border-radius: 3px; display: flex; align-items: center; justify-content: flex-end; padding-right: 4px; transition: width .5s cubic-bezier(.4,0,.2,1); }
+.vb-fill span { font-size: 8px; font-family: var(--mono); color: rgba(255,255,255,.8); white-space: nowrap; }
+
+/* ── LEAFLET OVERRIDES ── */
+.leaflet-container { background: var(--bg0) !important; }
+.leaflet-tile { filter: brightness(0.3) saturate(0.4) hue-rotate(200deg); }
+.leaflet-control-zoom { border: 1px solid var(--border2) !important; border-radius: 8px !important; overflow: hidden; }
+.leaflet-control-zoom a { background: var(--bg2) !important; color: var(--text) !important; border-color: var(--border) !important; }
+.leaflet-control-zoom a:hover { background: var(--bg3) !important; }
+.leaflet-control-attribution { display: none !important; }
+
+/* ── CIRCLE MARKERS (no Leaflet tiles needed) ── */
+.custom-circle { border-radius: 50%; border: 2px solid rgba(255,255,255,.25); cursor: pointer; transition: transform .15s; }
+.custom-circle:hover { transform: scale(1.2); }
+
+/* ── NOTE ── */
+.note { font-size: 10px; line-height: 1.55; color: var(--muted); background: var(--bg2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; padding: 8px 10px; }
+
+/* ── SCROLL ── */
+.scroll-section { overflow-y: auto; flex: 1; padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; }
+.scroll-section::-webkit-scrollbar { width: 3px; }
+.scroll-section::-webkit-scrollbar-thumb { background: var(--bg4); }
+
+/* ── CORR INDICATOR ── */
+.corr-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-family: var(--mono); padding: 2px 8px; border-radius: 20px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ════ HEADER ════ -->
+<header>
+  <div class="logo">Municipales <span>2026</span></div>
+  <span class="badge">Open Data · data.gouv.fr</span>
+  <span class="badge sim">⚠ Données simulées</span>
+  <div class="nav-hint">
+    Commune <kbd>→</kbd> Bureaux de vote · Clic sur la carte pour zoomer
+  </div>
+</header>
+
+<!-- ════ PANNEAU GAUCHE ════ -->
+<aside class="panel" id="left-panel">
+
+  <div class="section">
+    <div class="section-title">Afficher sur la carte</div>
+    <div class="filter-list" id="mode-filters">
+      <button class="filter-btn active" style="color:var(--orange)" onclick="setMapMode('abstention')">
+        <span class="dot" style="background:var(--orange)"></span>Taux d'abstention
+        <span class="pct" id="m-abs-avg">—</span>
+      </button>
+      <button class="filter-btn" style="color:var(--accent)" onclick="setMapMode('listes')">
+        <span class="dot" style="background:var(--accent)"></span>Nombre de listes
+        <span class="pct" id="m-lst-avg">—</span>
+      </button>
+      <button class="filter-btn" style="color:var(--green)" onclick="setMapMode('sortant')">
+        <span class="dot" style="background:var(--green)"></span>Sortant présent
+        <span class="pct" id="m-srt-avg">—</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Filtrer par CSP</div>
+    <div class="filter-list" id="csp-filters">
+      <button class="filter-btn active" style="color:var(--text)" onclick="setCSP('all')">
+        <span class="dot" style="background:var(--dim)"></span>Toutes les CSP
+      </button>
+      <button class="filter-btn" style="color:#3d8bff" onclick="setCSP('Ouvriers')">
+        <span class="dot" style="background:#3d8bff"></span>Ouvriers
+      </button>
+      <button class="filter-btn" style="color:#9b7aff" onclick="setCSP('Cadres')">
+        <span class="dot" style="background:#9b7aff"></span>Cadres / prof. intellectuelles
+      </button>
+      <button class="filter-btn" style="color:#f5c842" onclick="setCSP('Retraités')">
+        <span class="dot" style="background:#f5c842"></span>Retraités
+      </button>
+      <button class="filter-btn" style="color:#34d07a" onclick="setCSP('Employés')">
+        <span class="dot" style="background:#34d07a"></span>Employés
+      </button>
+      <button class="filter-btn" style="color:#c97c4a" onclick="setCSP('Agriculteurs')">
+        <span class="dot" style="background:#c97c4a"></span>Agriculteurs
+      </button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Communes disponibles</div>
+    <div class="commune-list" id="commune-list"></div>
+  </div>
+
+  <div class="section" style="margin-top:auto">
+    <div class="note">
+      Connectez les vrais CSV du Ministère de l'Intérieur + INSEE RP 2022 pour remplacer les données simulées. Voir le guide Python joint.
+    </div>
+  </div>
+
+</aside>
+
+<!-- ════ CARTE ════ -->
+<main class="map-area">
+  <div id="map"></div>
+  <div class="map-tooltip" id="map-tooltip"></div>
+  <div class="map-legend" id="map-legend"></div>
+</main>
+
+<!-- ════ PANNEAU DROIT ════ -->
+<aside class="panel" id="right-panel">
+
+  <!-- Breadcrumb navigation -->
+  <div class="breadcrumb" id="breadcrumb">
+    <span class="bc-item active" onclick="zoomTo('national')">France</span>
+  </div>
+
+  <div class="scroll-section" id="right-content">
+    <!-- Filled dynamically -->
+  </div>
+
+</aside>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════════════════
+const RAW = [{"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"BV01","bv_id":1,"csp_dominante":"Ouvriers","nb_listes":6,"sortant_present":true,"inscrits":828,"votants":354,"abstentions":474,"taux_abstention":57.13,"exprimes":344,"blancs_nuls":10,"voix_listes":[110,89,81,51,10,3],"lat":43.29087,"lon":5.36996},{"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"BV02","bv_id":2,"csp_dominante":"Ouvriers","nb_listes":6,"sortant_present":true,"inscrits":654,"votants":319,"abstentions":335,"taux_abstention":51.13,"exprimes":306,"blancs_nuls":13,"voix_listes":[80,63,62,40,37,24],"lat":43.30168,"lon":5.35959},{"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"BV03","bv_id":3,"csp_dominante":"Ouvriers","nb_listes":6,"sortant_present":true,"inscrits":1465,"votants":773,"abstentions":692,"taux_abstention":47.19,"exprimes":728,"blancs_nuls":45,"voix_listes":[223,211,157,88,25,24],"lat":43.30109,"lon":5.37089},{"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"BV04","bv_id":4,"csp_dominante":"Ouvriers","nb_listes":6,"sortant_present":true,"inscrits":1375,"votants":626,"abstentions":749,"taux_abstention":54.41,"exprimes":612,"blancs_nuls":14,"voix_listes":[225,158,91,73,48,17],"lat":43.29973,"lon":5.37799},{"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"BV05","bv_id":5,"csp_dominante":"Ouvriers","nb_listes":6,"sortant_present":true,"inscrits":763,"votants":296,"abstentions":467,"taux_abstention":61.1,"exprimes":286,"blancs_nuls":10,"voix_listes":[78,63,60,40,31,14],"lat":43.30017,"lon":5.35694},{"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"BV06","bv_id":6,"csp_dominante":"Ouvriers","nb_listes":6,"sortant_present":true,"inscrits":950,"votants":610,"abstentions":340,"taux_abstention":35.75,"exprimes":585,"blancs_nuls":25,"voix_listes":[195,143,96,56,50,45],"lat":43.29299,"lon":5.37785},{"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"BV07","bv_id":7,"csp_dominante":"Ouvriers","nb_listes":6,"sortant_present":true,"inscrits":714,"votants":354,"abstentions":360,"taux_abstention":50.3,"exprimes":343,"blancs_nuls":11,"voix_listes":[101,91,68,33,28,22],"lat":43.29441,"lon":5.38224},{"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"BV08","bv_id":8,"csp_dominante":"Ouvriers","nb_listes":6,"sortant_present":true,"inscrits":1539,"votants":734,"abstentions":805,"taux_abstention":52.28,"exprimes":716,"blancs_nuls":18,"voix_listes":[170,167,131,121,96,31],"lat":43.29374,"lon":5.38472},{"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"BV09","bv_id":9,"csp_dominante":"Ouvriers","nb_listes":6,"sortant_present":true,"inscrits":883,"votants":476,"abstentions":407,"taux_abstention":46.08,"exprimes":466,"blancs_nuls":10,"voix_listes":[155,122,82,74,21,12],"lat":43.30642,"lon":5.37067},{"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"BV10","bv_id":10,"csp_dominante":"Ouvriers","nb_listes":6,"sortant_present":true,"inscrits":1733,"votants":870,"abstentions":863,"taux_abstention":49.76,"exprimes":823,"blancs_nuls":47,"voix_listes":[210,196,184,154,76,3],"lat":43.28873,"lon":5.36784},{"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"BV11","bv_id":11,"csp_dominante":"Ouvriers","nb_listes":6,"sortant_present":true,"inscrits":1529,"votants":544,"abstentions":985,"taux_abstention":64.4,"exprimes":518,"blancs_nuls":26,"voix_listes":[135,114,103,84,68,14],"lat":43.29665,"lon":5.36077},{"code_dept":"13","code_commune":"13055","nom_commune":"Marseille","num_bv":"BV12","bv_id":12,"csp_dominante":"Ouvriers","nb_listes":6,"sortant_present":true,"inscrits":1365,"votants":678,"abstentions":687,"taux_abstention":50.29,"exprimes":644,"blancs_nuls":34,"voix_listes":[231,158,155,95,5,0],"lat":43.30508,"lon":5.38116},{"code_dept":"75","code_commune":"75056","nom_commune":"Paris 11e","num_bv":"BV01","bv_id":13,"csp_dominante":"Cadres","nb_listes":7,"sortant_present":false,"inscrits":1229,"votants":813,"abstentions":416,"taux_abstention":33.79,"exprimes":779,"blancs_nuls":34,"voix_listes":[197,162,145,131,105,24,15],"lat":48.86954,"lon":2.36915},{"code_dept":"75","code_commune":"75056","nom_commune":"Paris 11e","num_bv":"BV02","bv_id":14,"csp_dominante":"Cadres","nb_listes":7,"sortant_present":false,"inscrits":1680,"votants":1042,"abstentions":638,"taux_abstention":37.94,"exprimes":985,"blancs_nuls":57,"voix_listes":[290,210,155,122,89,61,58],"lat":48.8636,"lon":2.37734},{"code_dept":"75","code_commune":"75056","nom_commune":"Paris 11e","num_bv":"BV03","bv_id":15,"csp_dominante":"Cadres","nb_listes":7,"sortant_present":false,"inscrits":1659,"votants":1174,"abstentions":485,"taux_abstention":29.18,"exprimes":1148,"blancs_nuls":26,"voix_listes":[408,336,317,38,33,12,4],"lat":48.85123,"lon":2.37411},{"code_dept":"75","code_commune":"75056","nom_commune":"Paris 11e","num_bv":"BV04","bv_id":16,"csp_dominante":"Cadres","nb_listes":7,"sortant_present":false,"inscrits":1652,"votants":1076,"abstentions":576,"taux_abstention":34.86,"exprimes":1045,"blancs_nuls":31,"voix_listes":[263,216,184,157,130,59,36],"lat":48.86675,"lon":2.36991},{"code_dept":"75","code_commune":"75056","nom_commune":"Paris 11e","num_bv":"BV05","bv_id":17,"csp_dominante":"Cadres","nb_listes":7,"sortant_present":false,"inscrits":798,"votants":554,"abstentions":244,"taux_abstention":30.46,"exprimes":534,"blancs_nuls":20,"voix_listes":[124,112,102,91,90,8,7],"lat":48.85279,"lon":2.36995},{"code_dept":"75","code_commune":"75056","nom_commune":"Paris 11e","num_bv":"BV06","bv_id":18,"csp_dominante":"Cadres","nb_listes":7,"sortant_present":false,"inscrits":1698,"votants":1209,"abstentions":489,"taux_abstention":28.78,"exprimes":1164,"blancs_nuls":45,"voix_listes":[293,268,171,138,131,86,77],"lat":48.85161,"lon":2.39418},{"code_dept":"75","code_commune":"75056","nom_commune":"Paris 11e","num_bv":"BV07","bv_id":19,"csp_dominante":"Cadres","nb_listes":7,"sortant_present":false,"inscrits":630,"votants":334,"abstentions":296,"taux_abstention":46.95,"exprimes":316,"blancs_nuls":18,"voix_listes":[118,57,47,44,25,19,6],"lat":48.8559,"lon":2.38772},{"code_dept":"75","code_commune":"75056","nom_commune":"Paris 11e","num_bv":"BV08","bv_id":20,"csp_dominante":"Cadres","nb_listes":7,"sortant_present":false,"inscrits":1531,"votants":1058,"abstentions":473,"taux_abstention":30.85,"exprimes":1025,"blancs_nuls":33,"voix_listes":[216,198,189,180,132,59,51],"lat":48.85177,"lon":2.38627},{"code_dept":"69","code_commune":"69123","nom_commune":"Lyon 3e","num_bv":"BV01","bv_id":21,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":true,"inscrits":724,"votants":474,"abstentions":250,"taux_abstention":34.47,"exprimes":454,"blancs_nuls":20,"voix_listes":[173,151,89,27,14],"lat":45.75772,"lon":4.83855},{"code_dept":"69","code_commune":"69123","nom_commune":"Lyon 3e","num_bv":"BV02","bv_id":22,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":true,"inscrits":1081,"votants":730,"abstentions":351,"taux_abstention":32.44,"exprimes":704,"blancs_nuls":26,"voix_listes":[301,184,181,26,12],"lat":45.76715,"lon":4.83766},{"code_dept":"69","code_commune":"69123","nom_commune":"Lyon 3e","num_bv":"BV03","bv_id":23,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":true,"inscrits":1247,"votants":770,"abstentions":477,"taux_abstention":38.22,"exprimes":733,"blancs_nuls":37,"voix_listes":[258,150,120,114,91],"lat":45.76904,"lon":4.82288},{"code_dept":"69","code_commune":"69123","nom_commune":"Lyon 3e","num_bv":"BV04","bv_id":24,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":true,"inscrits":1538,"votants":1032,"abstentions":506,"taux_abstention":32.88,"exprimes":986,"blancs_nuls":46,"voix_listes":[303,288,271,71,53],"lat":45.76098,"lon":4.82276},{"code_dept":"69","code_commune":"69123","nom_commune":"Lyon 3e","num_bv":"BV05","bv_id":25,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":true,"inscrits":1100,"votants":746,"abstentions":354,"taux_abstention":32.1,"exprimes":707,"blancs_nuls":39,"voix_listes":[239,167,155,145,1],"lat":45.77034,"lon":4.82968},{"code_dept":"31","code_commune":"31555","nom_commune":"Toulouse","num_bv":"BV01","bv_id":26,"csp_dominante":"Cadres","nb_listes":6,"sortant_present":true,"inscrits":812,"votants":523,"abstentions":289,"taux_abstention":35.57,"exprimes":493,"blancs_nuls":30,"voix_listes":[169,152,75,37,31,29],"lat":43.60905,"lon":1.43531},{"code_dept":"31","code_commune":"31555","nom_commune":"Toulouse","num_bv":"BV02","bv_id":27,"csp_dominante":"Cadres","nb_listes":6,"sortant_present":true,"inscrits":1140,"votants":815,"abstentions":325,"taux_abstention":28.44,"exprimes":770,"blancs_nuls":45,"voix_listes":[319,241,126,49,19,16],"lat":43.6143,"lon":1.43405},{"code_dept":"31","code_commune":"31555","nom_commune":"Toulouse","num_bv":"BV03","bv_id":28,"csp_dominante":"Cadres","nb_listes":6,"sortant_present":true,"inscrits":1504,"votants":1010,"abstentions":494,"taux_abstention":32.84,"exprimes":968,"blancs_nuls":42,"voix_listes":[310,300,185,145,25,3],"lat":43.61139,"lon":1.44668},{"code_dept":"31","code_commune":"31555","nom_commune":"Toulouse","num_bv":"BV04","bv_id":29,"csp_dominante":"Cadres","nb_listes":6,"sortant_present":true,"inscrits":903,"votants":619,"abstentions":284,"taux_abstention":31.41,"exprimes":598,"blancs_nuls":21,"voix_listes":[162,152,111,109,58,6],"lat":43.60177,"lon":1.446},{"code_dept":"31","code_commune":"31555","nom_commune":"Toulouse","num_bv":"BV05","bv_id":30,"csp_dominante":"Cadres","nb_listes":6,"sortant_present":true,"inscrits":1432,"votants":948,"abstentions":484,"taux_abstention":33.75,"exprimes":893,"blancs_nuls":55,"voix_listes":[273,234,219,69,51,47],"lat":43.60295,"lon":1.43458},{"code_dept":"31","code_commune":"31555","nom_commune":"Toulouse","num_bv":"BV06","bv_id":31,"csp_dominante":"Cadres","nb_listes":6,"sortant_present":true,"inscrits":1280,"votants":841,"abstentions":439,"taux_abstention":34.25,"exprimes":802,"blancs_nuls":39,"voix_listes":[263,248,135,87,56,13],"lat":43.60411,"lon":1.43519},{"code_dept":"31","code_commune":"31555","nom_commune":"Toulouse","num_bv":"BV07","bv_id":32,"csp_dominante":"Cadres","nb_listes":6,"sortant_present":true,"inscrits":1542,"votants":1126,"abstentions":416,"taux_abstention":26.95,"exprimes":1088,"blancs_nuls":38,"voix_listes":[294,274,220,133,93,74],"lat":43.59609,"lon":1.4524},{"code_dept":"06","code_commune":"06088","nom_commune":"Nice","num_bv":"BV01","bv_id":33,"csp_dominante":"Retraités","nb_listes":4,"sortant_present":true,"inscrits":1319,"votants":991,"abstentions":328,"taux_abstention":24.82,"exprimes":933,"blancs_nuls":58,"voix_listes":[354,342,195,42],"lat":43.70377,"lon":7.27588},{"code_dept":"06","code_commune":"06088","nom_commune":"Nice","num_bv":"BV02","bv_id":34,"csp_dominante":"Retraités","nb_listes":4,"sortant_present":true,"inscrits":1143,"votants":867,"abstentions":276,"taux_abstention":24.08,"exprimes":849,"blancs_nuls":18,"voix_listes":[310,233,171,135],"lat":43.71988,"lon":7.25047},{"code_dept":"06","code_commune":"06088","nom_commune":"Nice","num_bv":"BV03","bv_id":35,"csp_dominante":"Retraités","nb_listes":4,"sortant_present":true,"inscrits":1780,"votants":1271,"abstentions":509,"taux_abstention":28.55,"exprimes":1224,"blancs_nuls":47,"voix_listes":[391,334,284,215],"lat":43.71494,"lon":7.25291},{"code_dept":"06","code_commune":"06088","nom_commune":"Nice","num_bv":"BV04","bv_id":36,"csp_dominante":"Retraités","nb_listes":4,"sortant_present":true,"inscrits":1483,"votants":1046,"abstentions":437,"taux_abstention":29.4,"exprimes":1023,"blancs_nuls":23,"voix_listes":[404,315,156,148],"lat":43.7146,"lon":7.25601},{"code_dept":"06","code_commune":"06088","nom_commune":"Nice","num_bv":"BV05","bv_id":37,"csp_dominante":"Retraités","nb_listes":4,"sortant_present":true,"inscrits":1233,"votants":915,"abstentions":318,"taux_abstention":25.78,"exprimes":872,"blancs_nuls":43,"voix_listes":[325,270,184,93],"lat":43.71516,"lon":7.25222},{"code_dept":"06","code_commune":"06088","nom_commune":"Nice","num_bv":"BV06","bv_id":38,"csp_dominante":"Retraités","nb_listes":4,"sortant_present":true,"inscrits":1765,"votants":1338,"abstentions":427,"taux_abstention":24.15,"exprimes":1296,"blancs_nuls":42,"voix_listes":[563,440,293,0],"lat":43.7118,"lon":7.26664},{"code_dept":"44","code_commune":"44109","nom_commune":"Nantes","num_bv":"BV01","bv_id":39,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":false,"inscrits":1552,"votants":1116,"abstentions":436,"taux_abstention":28.09,"exprimes":1071,"blancs_nuls":45,"voix_listes":[302,247,229,205,88],"lat":47.22168,"lon":-1.55002},{"code_dept":"44","code_commune":"44109","nom_commune":"Nantes","num_bv":"BV02","bv_id":40,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":false,"inscrits":791,"votants":476,"abstentions":315,"taux_abstention":39.72,"exprimes":451,"blancs_nuls":25,"voix_listes":[183,162,54,47,5],"lat":47.2133,"lon":-1.55435},{"code_dept":"44","code_commune":"44109","nom_commune":"Nantes","num_bv":"BV03","bv_id":41,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":false,"inscrits":749,"votants":565,"abstentions":184,"taux_abstention":24.48,"exprimes":541,"blancs_nuls":24,"voix_listes":[168,159,92,88,34],"lat":47.22625,"lon":-1.54279},{"code_dept":"44","code_commune":"44109","nom_commune":"Nantes","num_bv":"BV04","bv_id":42,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":false,"inscrits":818,"votants":491,"abstentions":327,"taux_abstention":39.96,"exprimes":466,"blancs_nuls":25,"voix_listes":[139,118,94,78,37],"lat":47.22675,"lon":-1.56496},{"code_dept":"44","code_commune":"44109","nom_commune":"Nantes","num_bv":"BV05","bv_id":43,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":false,"inscrits":873,"votants":529,"abstentions":344,"taux_abstention":39.33,"exprimes":498,"blancs_nuls":31,"voix_listes":[128,117,95,80,78],"lat":47.2185,"lon":-1.54368},{"code_dept":"67","code_commune":"67482","nom_commune":"Strasbourg","num_bv":"BV01","bv_id":44,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":true,"inscrits":1722,"votants":1273,"abstentions":449,"taux_abstention":26.06,"exprimes":1225,"blancs_nuls":48,"voix_listes":[347,335,300,180,63],"lat":48.56895,"lon":7.76043},{"code_dept":"67","code_commune":"67482","nom_commune":"Strasbourg","num_bv":"BV02","bv_id":45,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":true,"inscrits":1592,"votants":1096,"abstentions":496,"taux_abstention":31.14,"exprimes":1071,"blancs_nuls":25,"voix_listes":[373,220,196,187,95],"lat":48.56803,"lon":7.75792},{"code_dept":"67","code_commune":"67482","nom_commune":"Strasbourg","num_bv":"BV03","bv_id":46,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":true,"inscrits":1038,"votants":715,"abstentions":323,"taux_abstention":31.06,"exprimes":699,"blancs_nuls":16,"voix_listes":[193,147,145,142,72],"lat":48.5815,"lon":7.75462},{"code_dept":"67","code_commune":"67482","nom_commune":"Strasbourg","num_bv":"BV04","bv_id":47,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":true,"inscrits":640,"votants":378,"abstentions":262,"taux_abstention":40.85,"exprimes":365,"blancs_nuls":13,"voix_listes":[122,106,94,43,0],"lat":48.57178,"lon":7.75953},{"code_dept":"67","code_commune":"67482","nom_commune":"Strasbourg","num_bv":"BV05","bv_id":48,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":true,"inscrits":1718,"votants":1262,"abstentions":456,"taux_abstention":26.49,"exprimes":1197,"blancs_nuls":65,"voix_listes":[427,230,229,183,128],"lat":48.57678,"lon":7.76104},{"code_dept":"67","code_commune":"67482","nom_commune":"Strasbourg","num_bv":"BV06","bv_id":49,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":true,"inscrits":938,"votants":546,"abstentions":392,"taux_abstention":41.75,"exprimes":514,"blancs_nuls":32,"voix_listes":[170,122,109,98,15],"lat":48.57197,"lon":7.76311},{"code_dept":"59","code_commune":"59350","nom_commune":"Lille","num_bv":"BV01","bv_id":50,"csp_dominante":"Ouvriers","nb_listes":7,"sortant_present":true,"inscrits":972,"votants":666,"abstentions":306,"taux_abstention":31.47,"exprimes":652,"blancs_nuls":14,"voix_listes":[153,136,134,67,67,58,37],"lat":50.62425,"lon":3.04476},{"code_dept":"59","code_commune":"59350","nom_commune":"Lille","num_bv":"BV02","bv_id":51,"csp_dominante":"Ouvriers","nb_listes":7,"sortant_present":true,"inscrits":639,"votants":329,"abstentions":310,"taux_abstention":48.48,"exprimes":310,"blancs_nuls":19,"voix_listes":[127,108,31,28,8,5,3],"lat":50.63163,"lon":3.04946},{"code_dept":"59","code_commune":"59350","nom_commune":"Lille","num_bv":"BV03","bv_id":52,"csp_dominante":"Ouvriers","nb_listes":7,"sortant_present":true,"inscrits":1569,"votants":854,"abstentions":715,"taux_abstention":45.56,"exprimes":815,"blancs_nuls":39,"voix_listes":[168,161,151,131,121,47,36],"lat":50.62149,"lon":3.06688},{"code_dept":"59","code_commune":"59350","nom_commune":"Lille","num_bv":"BV04","bv_id":53,"csp_dominante":"Ouvriers","nb_listes":7,"sortant_present":true,"inscrits":1237,"votants":617,"abstentions":620,"taux_abstention":50.1,"exprimes":597,"blancs_nuls":20,"voix_listes":[141,103,99,97,90,57,10],"lat":50.62124,"lon":3.06547},{"code_dept":"59","code_commune":"59350","nom_commune":"Lille","num_bv":"BV05","bv_id":54,"csp_dominante":"Ouvriers","nb_listes":7,"sortant_present":true,"inscrits":847,"votants":425,"abstentions":422,"taux_abstention":49.79,"exprimes":403,"blancs_nuls":22,"voix_listes":[108,103,90,84,10,6,2],"lat":50.6276,"lon":3.05701},{"code_dept":"59","code_commune":"59350","nom_commune":"Lille","num_bv":"BV06","bv_id":55,"csp_dominante":"Ouvriers","nb_listes":7,"sortant_present":true,"inscrits":1487,"votants":581,"abstentions":906,"taux_abstention":60.9,"exprimes":551,"blancs_nuls":30,"voix_listes":[123,99,90,87,66,53,33],"lat":50.62887,"lon":3.05537},{"code_dept":"59","code_commune":"59350","nom_commune":"Lille","num_bv":"BV07","bv_id":56,"csp_dominante":"Ouvriers","nb_listes":7,"sortant_present":true,"inscrits":1149,"votants":627,"abstentions":522,"taux_abstention":45.38,"exprimes":607,"blancs_nuls":20,"voix_listes":[148,116,104,88,70,43,38],"lat":50.62593,"lon":3.05713},{"code_dept":"59","code_commune":"59350","nom_commune":"Lille","num_bv":"BV08","bv_id":57,"csp_dominante":"Ouvriers","nb_listes":7,"sortant_present":true,"inscrits":1265,"votants":618,"abstentions":647,"taux_abstention":51.08,"exprimes":586,"blancs_nuls":32,"voix_listes":[175,159,126,61,49,15,1],"lat":50.6336,"lon":3.05696},{"code_dept":"76","code_commune":"76540","nom_commune":"Rouen","num_bv":"BV01","bv_id":58,"csp_dominante":"Employés","nb_listes":4,"sortant_present":true,"inscrits":1092,"votants":563,"abstentions":529,"taux_abstention":48.4,"exprimes":537,"blancs_nuls":26,"voix_listes":[212,171,130,24],"lat":49.43763,"lon":1.10505},{"code_dept":"76","code_commune":"76540","nom_commune":"Rouen","num_bv":"BV02","bv_id":59,"csp_dominante":"Employés","nb_listes":4,"sortant_present":true,"inscrits":1227,"votants":729,"abstentions":498,"taux_abstention":40.54,"exprimes":699,"blancs_nuls":30,"voix_listes":[312,171,109,107],"lat":49.44227,"lon":1.0935},{"code_dept":"76","code_commune":"76540","nom_commune":"Rouen","num_bv":"BV03","bv_id":60,"csp_dominante":"Employés","nb_listes":4,"sortant_present":true,"inscrits":1072,"votants":662,"abstentions":410,"taux_abstention":38.24,"exprimes":646,"blancs_nuls":16,"voix_listes":[308,214,77,47],"lat":49.4369,"lon":1.09079},{"code_dept":"76","code_commune":"76540","nom_commune":"Rouen","num_bv":"BV04","bv_id":61,"csp_dominante":"Employés","nb_listes":4,"sortant_present":true,"inscrits":1591,"votants":915,"abstentions":676,"taux_abstention":42.45,"exprimes":869,"blancs_nuls":46,"voix_listes":[316,267,191,95],"lat":49.44042,"lon":1.09337},{"code_dept":"33","code_commune":"33063","nom_commune":"Bordeaux","num_bv":"BV01","bv_id":62,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":false,"inscrits":1693,"votants":941,"abstentions":752,"taux_abstention":44.4,"exprimes":918,"blancs_nuls":23,"voix_listes":[441,296,135,25,21],"lat":44.84286,"lon":-0.59112},{"code_dept":"33","code_commune":"33063","nom_commune":"Bordeaux","num_bv":"BV02","bv_id":63,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":false,"inscrits":625,"votants":434,"abstentions":191,"taux_abstention":30.46,"exprimes":418,"blancs_nuls":16,"voix_listes":[161,138,80,31,8],"lat":44.83581,"lon":-0.59198},{"code_dept":"33","code_commune":"33063","nom_commune":"Bordeaux","num_bv":"BV03","bv_id":64,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":false,"inscrits":709,"votants":471,"abstentions":238,"taux_abstention":33.47,"exprimes":459,"blancs_nuls":12,"voix_listes":[167,140,96,42,14],"lat":44.83612,"lon":-0.57632},{"code_dept":"33","code_commune":"33063","nom_commune":"Bordeaux","num_bv":"BV04","bv_id":65,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":false,"inscrits":1062,"votants":664,"abstentions":398,"taux_abstention":37.44,"exprimes":627,"blancs_nuls":37,"voix_listes":[192,183,138,95,19],"lat":44.847,"lon":-0.59122},{"code_dept":"33","code_commune":"33063","nom_commune":"Bordeaux","num_bv":"BV05","bv_id":66,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":false,"inscrits":1025,"votants":710,"abstentions":315,"taux_abstention":30.71,"exprimes":679,"blancs_nuls":31,"voix_listes":[292,138,125,82,42],"lat":44.83597,"lon":-0.57352},{"code_dept":"33","code_commune":"33063","nom_commune":"Bordeaux","num_bv":"BV06","bv_id":67,"csp_dominante":"Cadres","nb_listes":5,"sortant_present":false,"inscrits":1562,"votants":1009,"abstentions":553,"taux_abstention":35.38,"exprimes":961,"blancs_nuls":48,"voix_listes":[253,212,189,185,122],"lat":44.8403,"lon":-0.57436},{"code_dept":"01","code_commune":"01053","nom_commune":"Bourg-en-Bresse","num_bv":"BV01","bv_id":68,"csp_dominante":"Employés","nb_listes":3,"sortant_present":true,"inscrits":1005,"votants":498,"abstentions":507,"taux_abstention":50.41,"exprimes":480,"blancs_nuls":18,"voix_listes":[209,147,124],"lat":46.21233,"lon":5.21304},{"code_dept":"01","code_commune":"01053","nom_commune":"Bourg-en-Bresse","num_bv":"BV02","bv_id":69,"csp_dominante":"Employés","nb_listes":3,"sortant_present":true,"inscrits":939,"votants":488,"abstentions":451,"taux_abstention":47.99,"exprimes":463,"blancs_nuls":25,"voix_listes":[234,118,111],"lat":46.20188,"lon":5.22298},{"code_dept":"01","code_commune":"01053","nom_commune":"Bourg-en-Bresse","num_bv":"BV03","bv_id":70,"csp_dominante":"Employés","nb_listes":3,"sortant_present":true,"inscrits":1157,"votants":735,"abstentions":422,"taux_abstention":36.42,"exprimes":706,"blancs_nuls":29,"voix_listes":[569,92,45],"lat":46.20444,"lon":5.22057},{"code_dept":"48","code_commune":"48095","nom_commune":"Mende","num_bv":"BV01","bv_id":71,"csp_dominante":"Agriculteurs","nb_listes":2,"sortant_present":true,"inscrits":1112,"votants":742,"abstentions":370,"taux_abstention":33.27,"exprimes":708,"blancs_nuls":34,"voix_listes":[421,287],"lat":44.50991,"lon":3.50884},{"code_dept":"48","code_commune":"48095","nom_commune":"Mende","num_bv":"BV02","bv_id":72,"csp_dominante":"Agriculteurs","nb_listes":2,"sortant_present":true,"inscrits":1151,"votants":809,"abstentions":342,"taux_abstention":29.7,"exprimes":775,"blancs_nuls":34,"voix_listes":[631,144],"lat":44.51988,"lon":3.49917},{"code_dept":"63","code_commune":"63113","nom_commune":"Clermont-Ferrand","num_bv":"BV01","bv_id":73,"csp_dominante":"Employés","nb_listes":4,"sortant_present":true,"inscrits":1169,"votants":609,"abstentions":560,"taux_abstention":47.88,"exprimes":582,"blancs_nuls":27,"voix_listes":[227,160,153,42],"lat":45.7806,"lon":3.09773},{"code_dept":"63","code_commune":"63113","nom_commune":"Clermont-Ferrand","num_bv":"BV02","bv_id":74,"csp_dominante":"Employés","nb_listes":4,"sortant_present":true,"inscrits":1275,"votants":606,"abstentions":669,"taux_abstention":52.44,"exprimes":584,"blancs_nuls":22,"voix_listes":[194,166,124,100],"lat":45.76793,"lon":3.07464},{"code_dept":"63","code_commune":"63113","nom_commune":"Clermont-Ferrand","num_bv":"BV03","bv_id":75,"csp_dominante":"Employés","nb_listes":4,"sortant_present":true,"inscrits":1116,"votants":716,"abstentions":400,"taux_abstention":35.76,"exprimes":691,"blancs_nuls":25,"voix_listes":[254,168,138,131],"lat":45.77546,"lon":3.07763},{"code_dept":"63","code_commune":"63113","nom_commune":"Clermont-Ferrand","num_bv":"BV04","bv_id":76,"csp_dominante":"Employés","nb_listes":4,"sortant_present":true,"inscrits":1340,"votants":527,"abstentions":813,"taux_abstention":60.62,"exprimes":504,"blancs_nuls":23,"voix_listes":[202,176,106,20],"lat":45.76982,"lon":3.08064},{"code_dept":"84","code_commune":"84031","nom_commune":"Carpentras","num_bv":"BV01","bv_id":77,"csp_dominante":"Retraités","nb_listes":3,"sortant_present":true,"inscrits":1592,"votants":967,"abstentions":625,"taux_abstention":39.22,"exprimes":925,"blancs_nuls":42,"voix_listes":[538,233,154],"lat":44.05325,"lon":5.0358},{"code_dept":"84","code_commune":"84031","nom_commune":"Carpentras","num_bv":"BV02","bv_id":78,"csp_dominante":"Retraités","nb_listes":3,"sortant_present":true,"inscrits":832,"votants":509,"abstentions":323,"taux_abstention":38.79,"exprimes":490,"blancs_nuls":19,"voix_listes":[283,168,39],"lat":44.05653,"lon":5.04827},{"code_dept":"84","code_commune":"84031","nom_commune":"Carpentras","num_bv":"BV03","bv_id":79,"csp_dominante":"Retraités","nb_listes":3,"sortant_present":true,"inscrits":1159,"votants":874,"abstentions":285,"taux_abstention":24.55,"exprimes":841,"blancs_nuls":33,"voix_listes":[486,202,153],"lat":44.05419,"lon":5.05539},{"code_dept":"29","code_commune":"29232","nom_commune":"Quimper","num_bv":"BV01","bv_id":80,"csp_dominante":"Employés","nb_listes":3,"sortant_present":true,"inscrits":879,"votants":443,"abstentions":436,"taux_abstention":49.57,"exprimes":419,"blancs_nuls":24,"voix_listes":[224,117,78],"lat":48.00518,"lon":-4.09777},{"code_dept":"29","code_commune":"29232","nom_commune":"Quimper","num_bv":"BV02","bv_id":81,"csp_dominante":"Employés","nb_listes":3,"sortant_present":true,"inscrits":605,"votants":337,"abstentions":268,"taux_abstention":44.29,"exprimes":323,"blancs_nuls":14,"voix_listes":[198,96,29],"lat":47.99727,"lon":-4.10265},{"code_dept":"29","code_commune":"29232","nom_commune":"Quimper","num_bv":"BV03","bv_id":82,"csp_dominante":"Employés","nb_listes":3,"sortant_present":true,"inscrits":1730,"votants":843,"abstentions":887,"taux_abstention":51.27,"exprimes":801,"blancs_nuls":42,"voix_listes":[344,319,138],"lat":48.00612,"lon":-4.10584},{"code_dept":"29","code_commune":"29232","nom_commune":"Quimper","num_bv":"BV04","bv_id":83,"csp_dominante":"Employés","nb_listes":3,"sortant_present":true,"inscrits":1384,"votants":737,"abstentions":647,"taux_abstention":46.75,"exprimes":721,"blancs_nuls":16,"voix_listes":[260,237,224],"lat":47.99422,"lon":-4.09309}];
+
+// ── Build commune index
+const COMMUNES = {};
+RAW.forEach(b => {
+  if (!COMMUNES[b.code_commune]) {
+    COMMUNES[b.code_commune] = {
+      code: b.code_commune, dept: b.code_dept, nom: b.nom_commune,
+      csp: b.csp_dominante, nb_listes: b.nb_listes, sortant: b.sortant_present,
+      bureaux: []
+    };
+  }
+  COMMUNES[b.code_commune].bureaux.push(b);
+});
+// Aggregate commune stats
+Object.values(COMMUNES).forEach(c => {
+  c.inscrits     = c.bureaux.reduce((s,b)=>s+b.inscrits,0);
+  c.votants      = c.bureaux.reduce((s,b)=>s+b.votants,0);
+  c.abstentions  = c.bureaux.reduce((s,b)=>s+b.abstentions,0);
+  c.taux_abstention = c.inscrits ? (c.abstentions/c.inscrits*100) : 0;
+  c.lat          = c.bureaux.reduce((s,b)=>s+b.lat,0)/c.bureaux.length;
+  c.lon          = c.bureaux.reduce((s,b)=>s+b.lon,0)/c.bureaux.length;
+});
+
+const CSP_COLOR = { Ouvriers:'#3d8bff', Cadres:'#9b7aff', Retraités:'#f5c842', Employés:'#34d07a', Agriculteurs:'#c97c4a' };
+const LIST_COLORS = ['#3d8bff','#9b7aff','#34d07a','#f5c842','#f05050','#2dd4c0','#f58c42'];
+
+// ── STATE
+let mapMode = 'abstention', cspFilter = 'all', view = 'national';
+let selectedCommune = null, selectedBV = null;
+let markers = {};
+
+// ── MAP INIT
+const map = L.map('map', { zoomControl: true, attributionControl: false })
+  .setView([46.5, 2.5], 5);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+
+// ── HELPERS
+function absColor(pct) {
+  const t = Math.max(0, Math.min(1, (pct - 20) / 50));
+  const r = Math.round(52  + t*(240-52));
+  const g = Math.round(208 + t*(80-208));
+  const b2= Math.round(122 + t*(80-122));
+  return `rgb(${r},${g},${b2})`;
+}
+function listColor(n) {
+  const t = Math.max(0, Math.min(1, (n-1)/6));
+  const r = Math.round(80  + t*(61-80));
+  const g = Math.round(120 + t*(139-120));
+  const b2= Math.round(180 + t*(255-180));
+  return `rgb(${r},${g},${b2})`;
+}
+function sortantColor(has) { return has ? '#34d07a' : '#f05050'; }
+function markerColor(c) {
+  if (mapMode==='abstention') return absColor(c.taux_abstention);
+  if (mapMode==='listes')     return listColor(c.nb_listes);
+  return sortantColor(c.sortant);
+}
+function markerRadius(c) {
+  return Math.max(8, Math.min(22, 6 + c.inscrits/800));
+}
+
+// ── DRAW MARKERS
+function drawMarkers(communes) {
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+  const subset = Object.values(communes).filter(c => cspFilter==='all' || c.csp===cspFilter);
+  subset.forEach(c => {
+    const color = markerColor(c);
+    const r = markerRadius(c);
+    const m = L.circleMarker([c.lat, c.lon], {
+      radius: r, fillColor: color, color: 'rgba(255,255,255,.3)',
+      weight: 1.5, fillOpacity: 0.85
+    }).addTo(map);
+    m.on('mouseover', e => showTooltip(e, c));
+    m.on('mouseout', () => hideTooltip());
+    m.on('click', () => selectCommune(c.code));
+    markers[c.code] = m;
+  });
+  updateLegend();
+}
+
+// ── TOOLTIP
+const ttEl = document.getElementById('map-tooltip');
+function showTooltip(e, c) {
+  const pct = c.taux_abstention.toFixed(1);
+  ttEl.innerHTML = `
+    <div class="tt-head">
+      <span class="tt-name">${c.nom}</span>
+      <span class="tt-code">${c.code}</span>
+    </div>
+    <div class="tt-row"><span class="tt-lbl">Abstention</span><span class="tt-val" style="color:${absColor(c.taux_abstention)}">${pct}%</span></div>
+    <div class="tt-row"><span class="tt-lbl">CSP dominante</span><span class="tt-val" style="color:${CSP_COLOR[c.csp]}">${c.csp}</span></div>
+    <div class="tt-row"><span class="tt-lbl">Listes candidates</span><span class="tt-val">${c.nb_listes}</span></div>
+    <div class="tt-row"><span class="tt-lbl">Bureaux de vote</span><span class="tt-val">${c.bureaux.length}</span></div>
+    <div class="tt-row"><span class="tt-lbl">Inscrits</span><span class="tt-val">${c.inscrits.toLocaleString()}</span></div>
+    <hr class="tt-divider">
+    <div class="tt-row"><span class="tt-lbl">Sortant</span><span class="tt-val"><span class="tt-tag ${c.sortant?'yes':'no'}">${c.sortant?'Présent':'Absent'}</span></span></div>`;
+  const mapRect = document.getElementById('map').getBoundingClientRect();
+  let x = e.originalEvent.clientX - mapRect.left + 14;
+  let y = e.originalEvent.clientY - mapRect.top + 14;
+  if (x + 230 > mapRect.width) x -= 244;
+  ttEl.style.left = x+'px'; ttEl.style.top = y+'px';
+  ttEl.classList.add('show');
+}
+function hideTooltip() { ttEl.classList.remove('show'); }
+
+// ── LEGEND
+function updateLegend() {
+  const leg = document.getElementById('map-legend');
+  if (mapMode==='abstention') {
+    leg.innerHTML = `<div class="leg-title">Taux d'abstention</div>
+      <div class="leg-bar" style="background:linear-gradient(to right,${absColor(20)},${absColor(70)})"></div>
+      <div class="leg-labels"><span>20%</span><span>70%</span></div>`;
+  } else if (mapMode==='listes') {
+    leg.innerHTML = `<div class="leg-title">Nombre de listes</div>
+      <div class="leg-bar" style="background:linear-gradient(to right,${listColor(1)},${listColor(7)})"></div>
+      <div class="leg-labels"><span>1</span><span>7+</span></div>`;
+  } else {
+    leg.innerHTML = `<div class="leg-title">Sortant présent</div>
+      <div style="display:flex;gap:8px;align-items:center;font-size:10px;color:var(--muted)">
+        <span style="color:#34d07a">● Oui</span><span style="color:#f05050">● Non</span>
+      </div>`;
+  }
+}
+
+// ── COMMUNE LIST (left panel)
+function renderCommuneList() {
+  const el = document.getElementById('commune-list');
+  const subset = Object.values(COMMUNES).filter(c => cspFilter==='all'||c.csp===cspFilter)
+    .sort((a,b)=>a.nom.localeCompare(b.nom));
+  el.innerHTML = subset.map(c => `
+    <div class="commune-item ${selectedCommune===c.code?'active':''}" onclick="selectCommune('${c.code}')">
+      <span class="ci-dot" style="background:${CSP_COLOR[c.csp]}"></span>
+      <span class="ci-name">${c.nom}</span>
+      <span class="ci-abs">${c.taux_abstention.toFixed(1)}%</span>
+    </div>`).join('');
+}
+
+// ── STATS HEADER (left panel global)
+function updateGlobalStats() {
+  const subset = Object.values(COMMUNES).filter(c => cspFilter==='all'||c.csp===cspFilter);
+  const avgAbs = subset.reduce((s,c)=>s+c.taux_abstention,0)/subset.length;
+  const avgL   = subset.reduce((s,c)=>s+c.nb_listes,0)/subset.length;
+  const pctSrt = subset.filter(c=>c.sortant).length/subset.length*100;
+  document.getElementById('m-abs-avg').textContent = avgAbs.toFixed(1)+'%';
+  document.getElementById('m-lst-avg').textContent = avgL.toFixed(1);
+  document.getElementById('m-srt-avg').textContent = pctSrt.toFixed(0)+'%';
+}
+
+// ══════════════════════════════════════════════════════════
+//  RIGHT PANEL VIEWS
+// ══════════════════════════════════════════════════════════
+function renderNationalView() {
+  view = 'national'; selectedCommune = null; selectedBV = null;
+  setBreadcrumb([{label:'France', action:"zoomTo('national')"}]);
+  const communes = Object.values(COMMUNES);
+  const avgAbs = communes.reduce((s,c)=>s+c.taux_abstention,0)/communes.length;
+  const totalIns = communes.reduce((s,c)=>s+c.inscrits,0);
+  const totalVot = communes.reduce((s,c)=>s+c.votants,0);
+  const avgLists = communes.reduce((s,c)=>s+c.nb_listes,0)/communes.length;
+
+  // CSP breakdown
+  const cspData = {};
+  ['Ouvriers','Cadres','Retraités','Employés','Agriculteurs'].forEach(k=>{
+    const cc = communes.filter(c=>c.csp===k);
+    cspData[k] = cc.length ? cc.reduce((s,c)=>s+c.taux_abstention,0)/cc.length : 0;
+  });
+  const maxCsp = Math.max(...Object.values(cspData));
+
+  // Correlation abstention vs listes
+  const mx = communes.reduce((s,c)=>s+c.nb_listes,0)/communes.length;
+  const my = communes.reduce((s,c)=>s+c.taux_abstention,0)/communes.length;
+  const num = communes.reduce((s,c)=>s+(c.nb_listes-mx)*(c.taux_abstention-my),0);
+  const den = communes.reduce((s,c)=>s+(c.nb_listes-mx)**2,0);
+  const r = den ? (num / Math.sqrt(den * communes.reduce((s,c)=>s+(c.taux_abstention-my)**2,0))) : 0;
+
+  document.getElementById('right-content').innerHTML = `
+    <div>
+      <div class="section-title" style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">Vue nationale · ${communes.length} communes</div>
+      <div class="metrics-grid">
+        <div class="metric"><div class="m-label">Abstention moy.</div><div class="m-val" style="color:var(--orange)">${avgAbs.toFixed(1)}%</div></div>
+        <div class="metric"><div class="m-label">Moy. listes</div><div class="m-val" style="color:var(--accent)">${avgLists.toFixed(1)}</div></div>
+        <div class="metric"><div class="m-label">Inscrits</div><div class="m-val" style="font-size:16px">${(totalIns/1000).toFixed(0)}k</div></div>
+        <div class="metric"><div class="m-label">Participation</div><div class="m-val" style="color:var(--green);font-size:16px">${(totalVot/totalIns*100).toFixed(1)}%</div></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title" style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Abstention par CSP dominante</div>
+      <div class="bar-rows">
+        ${['Ouvriers','Cadres','Retraités','Employés','Agriculteurs'].map(k=>`
+        <div class="bar-row">
+          <span class="bar-lbl" style="color:${CSP_COLOR[k]}">${k}</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${(cspData[k]/maxCsp*100).toFixed(0)}%;background:${CSP_COLOR[k]}"></div></div>
+          <span class="bar-val">${cspData[k].toFixed(1)}%</span>
+        </div>`).join('')}
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title" style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Corrélation abstention / nb listes</div>
+      <canvas id="scatter-canvas" style="height:130px"></canvas>
+      <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:9px;color:var(--muted)">Chaque point = 1 commune</div>
+        <span class="corr-pill" style="background:${r<0?'rgba(52,208,122,.12)':'rgba(240,80,80,.12)'};color:${r<0?'var(--green)':'var(--red)'}">
+          r = ${r.toFixed(2)}
+        </span>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-title" style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Impact du sortant sur l'abstention</div>
+      ${(()=>{
+        const avecS = communes.filter(c=>c.sortant);
+        const sansS = communes.filter(c=>!c.sortant);
+        const aA = avecS.reduce((s,c)=>s+c.taux_abstention,0)/avecS.length;
+        const sA = sansS.reduce((s,c)=>s+c.taux_abstention,0)/sansS.length;
+        return `<div class="bar-rows">
+          <div class="bar-row"><span class="bar-lbl" style="color:var(--green)">Présent</span><div class="bar-track"><div class="bar-fill" style="width:${(aA/70*100).toFixed(0)}%;background:var(--green)"></div></div><span class="bar-val">${aA.toFixed(1)}%</span></div>
+          <div class="bar-row"><span class="bar-lbl" style="color:var(--red)">Absent</span><div class="bar-track"><div class="bar-fill" style="width:${(sA/70*100).toFixed(0)}%;background:var(--red)"></div></div><span class="bar-val">${sA.toFixed(1)}%</span></div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px">Δ = ${(sA-aA>0?'+':'')}${(sA-aA).toFixed(1)} pts quand le sortant est absent</div>`;
+      })()}
+    </div>`;
+  setTimeout(drawScatter, 50);
+}
+
+function drawScatter() {
+  const canvas = document.getElementById('scatter-canvas');
+  if (!canvas) return;
+  const W = canvas.offsetWidth, H = 130;
+  canvas.width = W*2; canvas.height = H*2;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2,2);
+  const pad = {l:30,r:8,t:8,b:22};
+  const pw = W-pad.l-pad.r, ph = H-pad.t-pad.b;
+  const communes = Object.values(COMMUNES).filter(c=>cspFilter==='all'||c.csp===cspFilter);
+  const xMin=1,xMax=8,yMin=20,yMax=70;
+  const px=v=>pad.l+(v-xMin)/(xMax-xMin)*pw;
+  const py=v=>pad.t+(1-(v-yMin)/(yMax-yMin))*ph;
+  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=.5;
+  [2,3,4,5,6,7].forEach(x=>{ctx.beginPath();ctx.moveTo(px(x),pad.t);ctx.lineTo(px(x),H-pad.b);ctx.stroke()});
+  [30,40,50,60].forEach(y=>{ctx.beginPath();ctx.moveTo(pad.l,py(y));ctx.lineTo(W-pad.r,py(y));ctx.stroke()});
+  ctx.font='8px JetBrains Mono, monospace'; ctx.fillStyle='rgba(106,122,154,.7)';
+  ctx.textAlign='center';
+  [1,3,5,7].forEach(v=>ctx.fillText(v,px(v),H-5));
+  ctx.textAlign='right';
+  [30,50,70].forEach(v=>ctx.fillText(v+'%',pad.l-2,py(v)+3));
+  communes.forEach(c=>{
+    ctx.beginPath(); ctx.arc(px(c.nb_listes),py(c.taux_abstention),4,0,Math.PI*2);
+    ctx.fillStyle=CSP_COLOR[c.csp]+'bb';ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=.5;ctx.stroke();
+  });
+  const n=communes.length;
+  if(n>2){
+    const mx=communes.reduce((s,c)=>s+c.nb_listes,0)/n;
+    const my=communes.reduce((s,c)=>s+c.taux_abstention,0)/n;
+    const num=communes.reduce((s,c)=>s+(c.nb_listes-mx)*(c.taux_abstention-my),0);
+    const den=communes.reduce((s,c)=>s+(c.nb_listes-mx)**2,0);
+    const slope=den?num/den:0, inter=my-slope*mx;
+    ctx.beginPath();ctx.moveTo(px(xMin),py(slope*xMin+inter));ctx.lineTo(px(xMax),py(slope*xMax+inter));
+    ctx.strokeStyle='rgba(245,200,66,.6)';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+  }
+}
+
+function renderCommuneView(code) {
+  const c = COMMUNES[code];
+  view = 'commune';
+  setBreadcrumb([
+    {label:'France', action:"zoomTo('national')"},
+    {label:c.nom, action:`selectCommune('${code}')`, active:true}
+  ]);
+  map.flyTo([c.lat, c.lon], 14, {duration:1.2});
+
+  // Draw BV markers for this commune
+  Object.values(markers).forEach(m=>map.removeLayer(m));
+  markers = {};
+  c.bureaux.forEach(b=>{
+    const color = mapMode==='abstention' ? absColor(b.taux_abstention) :
+                  mapMode==='listes' ? listColor(b.nb_listes) : sortantColor(b.sortant_present);
+    const r = Math.max(7, Math.min(16, 5 + b.inscrits/300));
+    const m = L.circleMarker([b.lat, b.lon], {
+      radius:r, fillColor:color, color:'rgba(255,255,255,.4)', weight:1.5, fillOpacity:.9
+    }).addTo(map);
+    m.on('mouseover', e => showBVTooltip(e, b, c));
+    m.on('mouseout', hideTooltip);
+    m.on('click', ()=>selectBV(b, c));
+    markers[b.bv_id] = m;
+  });
+
+  const totalIns = c.inscrits, totalVot = c.votants;
+  const minAbs = Math.min(...c.bureaux.map(b=>b.taux_abstention));
+  const maxAbs = Math.max(...c.bureaux.map(b=>b.taux_abstention));
+
+  document.getElementById('right-content').innerHTML = `
+    <div>
+      <div class="section-title" style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">${c.nom} · ${c.bureaux.length} bureaux de vote</div>
+      <div class="metrics-grid">
+        <div class="metric"><div class="m-label">Abstention</div><div class="m-val" style="color:${absColor(c.taux_abstention)}">${c.taux_abstention.toFixed(1)}%</div><div class="m-sub">BV: ${minAbs.toFixed(0)}%–${maxAbs.toFixed(0)}%</div></div>
+        <div class="metric"><div class="m-label">Participation</div><div class="m-val" style="color:var(--green)">${(100-c.taux_abstention).toFixed(1)}%</div></div>
+        <div class="metric"><div class="m-label">Inscrits</div><div class="m-val" style="font-size:16px">${totalIns.toLocaleString()}</div></div>
+        <div class="metric"><div class="m-label">Votants</div><div class="m-val" style="font-size:16px">${totalVot.toLocaleString()}</div></div>
+      </div>
+    </div>
+    <div class="metrics-grid">
+      <div class="metric"><div class="m-label">Listes</div><div class="m-val" style="color:var(--accent)">${c.nb_listes}</div></div>
+      <div class="metric"><div class="m-label">Sortant</div><div class="m-val" style="font-size:15px;color:${c.sortant?'var(--green)':'var(--red)'}">${c.sortant?'Oui':'Non'}</div></div>
+    </div>
+    <div>
+      <div class="section-title" style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">CSP dominante</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="width:10px;height:10px;border-radius:50%;background:${CSP_COLOR[c.csp]};display:inline-block"></span>
+        <span style="font-weight:600;color:${CSP_COLOR[c.csp]}">${c.csp}</span>
+      </div>
+    </div>
+    <div>
+      <div class="section-title" style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Bureaux de vote — cliquez pour le détail</div>
+      <div class="bv-list" id="bv-list">
+        ${c.bureaux.map(b=>`
+        <div class="bv-item ${selectedBV&&selectedBV.bv_id===b.bv_id?'active':''}" id="bv-${b.bv_id}" onclick="selectBV(RAW[${b.bv_id-1}], COMMUNES['${c.code}'])">
+          <span class="bv-num">${b.num_bv}</span>
+          <div class="bar-track" style="flex:1"><div class="bar-fill" style="width:${b.taux_abstention.toFixed(0)}%;background:${absColor(b.taux_abstention)}"></div></div>
+          <span class="bv-abs" style="color:${absColor(b.taux_abstention)}">${b.taux_abstention.toFixed(1)}%</span>
+          <span class="bv-inscrits">${b.inscrits}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderBVView(b, c) {
+  view = 'bv';
+  setBreadcrumb([
+    {label:'France', action:"zoomTo('national')"},
+    {label:c.nom, action:`selectCommune('${c.code}')`},
+    {label:b.num_bv, action:``, active:true}
+  ]);
+  const maxVoix = Math.max(...b.voix_listes);
+
+  document.getElementById('right-content').innerHTML = `
+    <div>
+      <div class="section-title" style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">${c.nom} · ${b.num_bv}</div>
+      <div class="metrics-grid">
+        <div class="metric"><div class="m-label">Abstention</div><div class="m-val" style="color:${absColor(b.taux_abstention)}">${b.taux_abstention.toFixed(1)}%</div></div>
+        <div class="metric"><div class="m-label">Participation</div><div class="m-val" style="color:var(--green)">${(100-b.taux_abstention).toFixed(1)}%</div></div>
+        <div class="metric"><div class="m-label">Inscrits</div><div class="m-val" style="font-size:16px">${b.inscrits.toLocaleString()}</div></div>
+        <div class="metric"><div class="m-label">Exprimés</div><div class="m-val" style="font-size:16px">${b.exprimes.toLocaleString()}</div></div>
+        <div class="metric full"><div class="m-label">Blancs & nuls</div><div class="m-val" style="font-size:15px;color:var(--muted)">${b.blancs_nuls} <span style="font-size:11px;font-weight:400">(${(b.blancs_nuls/b.votants*100).toFixed(1)}% des votants)</span></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="section-title" style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Résultats par liste</div>
+      <div class="voix-bars">
+        ${b.voix_listes.map((v,i)=>`
+        <div class="vb-row">
+          <span class="vb-lbl">L${i+1}</span>
+          <div class="vb-track">
+            <div class="vb-fill" style="width:${(v/maxVoix*100).toFixed(0)}%;background:${LIST_COLORS[i%LIST_COLORS.length]}">
+              <span>${v} v.</span>
+            </div>
+          </div>
+          <span style="font-size:9px;font-family:var(--mono);color:var(--muted);min-width:34px;text-align:right">${(v/b.exprimes*100).toFixed(1)}%</span>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="metrics-grid">
+      <div class="metric"><div class="m-label">Listes</div><div class="m-val" style="color:var(--accent)">${b.nb_listes}</div></div>
+      <div class="metric"><div class="m-label">Sortant</div><div class="m-val" style="font-size:14px;color:${b.sortant_present?'var(--green)':'var(--red)'}">${b.sortant_present?'Oui':'Non'}</div></div>
+    </div>
+    <div>
+      <button onclick="selectCommune('${c.code}')" style="width:100%;padding:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:var(--f);font-size:12px;cursor:pointer">
+        ← Retour aux BV de ${c.nom}
+      </button>
+    </div>`;
+}
+
+function showBVTooltip(e, b, c) {
+  ttEl.innerHTML = `
+    <div class="tt-head"><span class="tt-name">${c.nom}</span><span class="tt-code">${b.num_bv}</span></div>
+    <div class="tt-row"><span class="tt-lbl">Abstention</span><span class="tt-val" style="color:${absColor(b.taux_abstention)}">${b.taux_abstention.toFixed(1)}%</span></div>
+    <div class="tt-row"><span class="tt-lbl">Inscrits</span><span class="tt-val">${b.inscrits}</span></div>
+    <div class="tt-row"><span class="tt-lbl">Exprimés</span><span class="tt-val">${b.exprimes}</span></div>
+    <div class="tt-row"><span class="tt-lbl">Listes</span><span class="tt-val">${b.nb_listes}</span></div>`;
+  const mapRect = document.getElementById('map').getBoundingClientRect();
+  let x = e.originalEvent.clientX - mapRect.left + 14;
+  let y = e.originalEvent.clientY - mapRect.top + 14;
+  if (x+220>mapRect.width) x-=234;
+  ttEl.style.left=x+'px'; ttEl.style.top=y+'px';
+  ttEl.classList.add('show');
+}
+
+// ── NAVIGATION
+function setBreadcrumb(items) {
+  const bc = document.getElementById('breadcrumb');
+  bc.innerHTML = items.map((item,i)=>`
+    ${i>0?'<span class="bc-sep">›</span>':''}
+    <span class="bc-item ${item.active?'active':''}" ${item.action?`onclick="${item.action}"`:''}>${item.label}</span>`
+  ).join('');
+}
+
+function selectCommune(code) {
+  selectedCommune = code; selectedBV = null;
+  renderCommuneList();
+  renderCommuneView(code);
+}
+
+function selectBV(b, c) {
+  selectedBV = b;
+  renderBVView(b, c);
+  // Highlight the BV marker
+  Object.values(markers).forEach((m,k)=>{ try{ m.setStyle({weight:1.5}); }catch(e){} });
+  if (markers[b.bv_id]) markers[b.bv_id].setStyle({color:'#fff',weight:2.5});
+}
+
+function zoomTo(level) {
+  if (level==='national') {
+    selectedCommune=null; selectedBV=null;
+    map.flyTo([46.5,2.5],5,{duration:1.2});
+    drawMarkers(COMMUNES);
+    renderCommuneList();
+    renderNationalView();
+  }
+}
+
+// ── CONTROLS
+function setMapMode(mode) {
+  mapMode = mode;
+  document.querySelectorAll('#mode-filters .filter-btn').forEach(b=>{
+    const active = b.getAttribute('onclick').includes(`'${mode}'`);
+    b.classList.toggle('active', active);
+  });
+  if (selectedCommune) {
+    const c = COMMUNES[selectedCommune];
+    c.bureaux.forEach(b=>{
+      const color = mode==='abstention'?absColor(b.taux_abstention):mode==='listes'?listColor(b.nb_listes):sortantColor(b.sortant_present);
+      if (markers[b.bv_id]) markers[b.bv_id].setStyle({fillColor:color});
+    });
+  } else {
+    Object.values(COMMUNES).forEach(c=>{
+      if (markers[c.code]) markers[c.code].setStyle({fillColor:markerColor(c)});
+    });
+  }
+  updateLegend();
+}
+
+function setCSP(csp) {
+  cspFilter = csp;
+  document.querySelectorAll('#csp-filters .filter-btn').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('onclick').includes(`'${csp}'`));
+  });
+  if (!selectedCommune) drawMarkers(COMMUNES);
+  updateGlobalStats();
+  renderCommuneList();
+  if (!selectedCommune) { setTimeout(drawScatter,50); }
+}
+
+// ── INIT
+drawMarkers(COMMUNES);
+renderCommuneList();
+updateGlobalStats();
+renderNationalView();
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Serveur local (carte interactive)",
+      "type": "shell",
+      "command": "python -m http.server 8080 --directory ${workspaceFolder}",
+      "presentation": { "reveal": "always", "panel": "dedicated" },
+      "problemMatcher": [],
+      "group": "build",
+      "isBackground": true
+    },
+    {
+      "label": "Installer les dépendances",
+      "type": "shell",
+      "command": "pip install -r ${workspaceFolder}/requirements.txt",
+      "presentation": { "reveal": "always" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Lancer le pipeline (test)",
+      "type": "shell",
+      "command": "python src/pipeline.py --data-dir data/raw --output data/processed",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always" },
+      "problemMatcher": [],
+      "group": { "kind": "build", "isDefault": true }
+    }
+  ]
+}

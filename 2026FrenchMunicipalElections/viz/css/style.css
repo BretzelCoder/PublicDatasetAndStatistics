@@ -1,0 +1,451 @@
+/* ══════════════════════════════════════════════════════
+   Élections Municipales 2026 — Feuille de styles
+   ══════════════════════════════════════════════════════ */
+
+/* ── Variables globales ── */
+:root {
+  --bg0:    #090d14;
+  --bg1:    #0f1520;
+  --bg2:    #151e2e;
+  --bg3:    #1c2840;
+  --bg4:    #233050;
+
+  --border:  rgba(120, 160, 255, 0.10);
+  --border2: rgba(120, 160, 255, 0.18);
+
+  --text:   #dde4f0;
+  --muted:  #6a7a9a;
+  --dim:    #3a4860;
+
+  --accent:  #3d8bff;
+  --green:   #34d07a;
+  --red:     #f05050;
+  --yellow:  #f5c842;
+  --orange:  #f58c42;
+  --purple:  #9b7aff;
+  --teal:    #2dd4c0;
+
+  --f:    'Space Grotesk', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+/* ── Reset ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg0);
+  color: var(--text);
+  font-family: var(--f);
+  font-size: 13px;
+}
+
+/* ══════════════════════════════════════════════════════
+   LAYOUT
+   ══════════════════════════════════════════════════════ */
+
+.app {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  grid-template-columns: 280px 1fr 260px;
+  height: 100vh;
+  gap: 1px;
+  background: var(--border);
+}
+
+/* ── Header ── */
+header {
+  grid-column: 1 / -1;
+  background: var(--bg1);
+  display: flex;
+  align-items: center;
+  padding: 0 18px;
+  gap: 14px;
+  border-bottom: 1px solid var(--border2);
+}
+
+.logo {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.logo span { color: var(--accent); }
+
+.badge {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(61, 139, 255, 0.18);
+  color: var(--accent);
+  padding: 3px 8px;
+  border-radius: 20px;
+  border: 1px solid rgba(61, 139, 255, 0.3);
+}
+.badge.sim {
+  background: rgba(245, 200, 66, 0.12);
+  color: var(--yellow);
+  border-color: rgba(245, 200, 66, 0.3);
+}
+
+.nav-hint {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--mono);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.nav-hint kbd {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 9px;
+}
+
+/* ══════════════════════════════════════════════════════
+   PANNEAUX LATÉRAUX
+   ══════════════════════════════════════════════════════ */
+
+.panel {
+  background: var(--bg1);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.panel::-webkit-scrollbar { width: 3px; }
+.panel::-webkit-scrollbar-thumb { background: var(--bg4); }
+
+.section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-title {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+/* ── Breadcrumb ── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  min-height: 36px;
+  flex-shrink: 0;
+}
+.bc-item {
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.bc-item:hover { color: var(--text); }
+.bc-item.active { color: var(--accent); font-weight: 500; }
+.bc-sep { color: var(--dim); }
+
+/* ── Boutons de filtre ── */
+.filter-list { display: flex; flex-direction: column; gap: 4px; }
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--muted);
+  font-family: var(--f);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+.filter-btn:hover { border-color: var(--border2); color: var(--text); }
+.filter-btn.active { border-color: currentColor; font-weight: 500; }
+.filter-btn.active .dot { box-shadow: 0 0 6px currentColor; }
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.filter-btn .pct {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+/* ── Métriques ── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.metric {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.metric.full { grid-column: 1 / -1; }
+
+.m-label {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.m-val {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--mono);
+  line-height: 1;
+}
+.m-sub {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+/* ── Barres de progression ── */
+.bar-rows { display: flex; flex-direction: column; gap: 5px; }
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+}
+.bar-lbl { color: var(--muted); width: 60px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { flex: 1; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+.bar-val { font-family: var(--mono); color: var(--muted); min-width: 34px; text-align: right; }
+
+/* ── Canvas scatter ── */
+canvas { display: block; width: 100%; height: 120px; }
+
+/* ── Liste des communes ── */
+.commune-list { display: flex; flex-direction: column; gap: 3px; }
+
+.commune-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.commune-item:hover,
+.commune-item.active { border-color: var(--accent); background: var(--bg3); }
+
+.ci-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ci-name { flex: 1; font-size: 11px; font-weight: 500; }
+.ci-abs { font-size: 10px; font-family: var(--mono); color: var(--muted); }
+
+/* ── Liste bureaux de vote ── */
+.bv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.bv-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.12s;
+  font-size: 10px;
+}
+.bv-item:hover,
+.bv-item.active { border-color: var(--accent); }
+
+.bv-num { font-family: var(--mono); color: var(--muted); width: 32px; }
+.bv-inscrits { color: var(--muted); margin-left: auto; }
+.bv-abs { font-family: var(--mono); font-weight: 600; min-width: 36px; text-align: right; }
+
+/* ── Barres voix par liste ── */
+.voix-bars { display: flex; flex-direction: column; gap: 4px; }
+
+.vb-row { display: flex; align-items: center; gap: 6px; }
+.vb-lbl { font-size: 9px; color: var(--muted); width: 28px; flex-shrink: 0; font-family: var(--mono); }
+.vb-track { flex: 1; height: 14px; background: var(--bg3); border-radius: 3px; overflow: hidden; position: relative; }
+.vb-fill {
+  height: 100%;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 4px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.vb-fill span { font-size: 8px; font-family: var(--mono); color: rgba(255, 255, 255, 0.8); white-space: nowrap; }
+
+/* ── Tags ── */
+.tt-tag {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.tt-tag.yes { background: rgba(52, 208, 122, 0.15); color: var(--green); }
+.tt-tag.no  { background: rgba(240, 80, 80, 0.12);  color: var(--red); }
+
+/* ── Corrélation pill ── */
+.corr-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-family: var(--mono);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+/* ── Note / info ── */
+.note {
+  font-size: 10px;
+  line-height: 1.55;
+  color: var(--muted);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  padding: 8px 10px;
+}
+.note code {
+  font-family: var(--mono);
+  font-size: 9px;
+  background: var(--bg3);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* ── Section scrollable ── */
+.scroll-section {
+  overflow-y: auto;
+  flex: 1;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.scroll-section::-webkit-scrollbar { width: 3px; }
+.scroll-section::-webkit-scrollbar-thumb { background: var(--bg4); }
+
+/* ══════════════════════════════════════════════════════
+   CARTE
+   ══════════════════════════════════════════════════════ */
+
+.map-area { position: relative; background: var(--bg0); }
+#map { width: 100%; height: 100%; }
+
+/* Override Leaflet */
+.leaflet-container { background: var(--bg0) !important; }
+.leaflet-tile { filter: brightness(0.3) saturate(0.4) hue-rotate(200deg); }
+.leaflet-control-zoom {
+  border: 1px solid var(--border2) !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+.leaflet-control-zoom a { background: var(--bg2) !important; color: var(--text) !important; border-color: var(--border) !important; }
+.leaflet-control-zoom a:hover { background: var(--bg3) !important; }
+.leaflet-control-attribution { display: none !important; }
+
+/* ── Tooltip carte ── */
+.map-tooltip {
+  position: absolute;
+  background: var(--bg1);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 12px 14px;
+  pointer-events: none;
+  min-width: 210px;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.12s;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+.map-tooltip.show { opacity: 1; }
+
+.tt-head { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+.tt-name { font-size: 13px; font-weight: 600; }
+.tt-code { font-size: 9px; color: var(--muted); font-family: var(--mono); }
+.tt-row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; }
+.tt-lbl { font-size: 10px; color: var(--muted); }
+.tt-val { font-size: 11px; font-family: var(--mono); font-weight: 500; }
+.tt-divider { border: none; border-top: 1px solid var(--border); margin: 6px 0; }
+
+/* ── Légende carte ── */
+.map-legend {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 999;
+  background: var(--bg1);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 160px;
+}
+.leg-title {
+  font-size: 9px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.leg-bar { height: 6px; border-radius: 3px; margin-bottom: 4px; }
+.leg-labels { display: flex; justify-content: space-between; font-size: 9px; font-family: var(--mono); color: var(--muted); }
+
+/* ── Recherche commune ── */
+#commune-search {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 6px;
+  outline: none;
+}
+#commune-search::placeholder { color: var(--muted); }
+#commune-search:focus { border-color: var(--accent); }
+
+#commune-list-info {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 4px 2px;
+}

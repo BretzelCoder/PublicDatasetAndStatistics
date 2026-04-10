@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.black-formatter",
+    "ms-python.pylint",
+    "mechatroner.rainbow-csv",
+    "ms-vscode.live-server",
+    "eamodio.gitlens",
+    "mhutchie.git-graph",
+    "ms-toolsai.jupyter"
+  ]
+}
