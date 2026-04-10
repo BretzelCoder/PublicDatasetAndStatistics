@@ -5,8 +5,6 @@ data/raw/listes_candidates_t1.csv
 data/raw/listes_candidates_t2.csv
 data/raw/sortants_rne.csv
 
-# Données processed lourdes
-data/processed/bureaux_vote_final.json
 
 # Python
 __pycache__/
