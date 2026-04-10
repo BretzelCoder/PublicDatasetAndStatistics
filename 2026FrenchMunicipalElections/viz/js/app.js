@@ -42,7 +42,7 @@ let RAW = [];           // données brutes (tous les BV)
 let COMMUNES = {};      // index par code_commune
 let mapMode = 'abstention';
 let cspFilter = 'all';
-let tourFilter = '1';   // '1', '2', ou 'all'
+let tourFilter = '1';   // '1' ou '2'
 let selectedCommune = null;
 let selectedBV = null;
 let markers = {};
@@ -71,12 +71,12 @@ async function loadData() {
   initMap();
   renderCommuneList();
   updateGlobalStats();
-  renderNationalView();
+  if (!selectedCommune) renderNationalView();
 }
 
 function buildCommuneIndex() {
   COMMUNES = {};
-  const activeRaw = tourFilter === 'all' ? RAW : RAW.filter(b => String(b.tour ?? 1) === tourFilter);
+  const activeRaw = RAW.filter(b => String(b.tour ?? 1) === tourFilter);
   activeRaw.forEach(b => {
     if (!COMMUNES[b.code_commune]) {
       COMMUNES[b.code_commune] = {

@@ -506,10 +506,17 @@ def enrich_coords(df_bv: pd.DataFrame, coords: dict, rng: np.random.Generator) -
     df_bv["lat_base"] = df_bv.apply(get_lat, axis=1)
     df_bv["lon_base"] = df_bv.apply(get_lon, axis=1)
 
-    # Dispersion aléatoire reproductible pour les BV d'une même commune
-    n = len(df_bv)
-    df_bv["lat"] = (df_bv["lat_base"] + rng.uniform(-0.012, 0.012, n)).round(5)
-    df_bv["lon"] = (df_bv["lon_base"] + rng.uniform(-0.018, 0.018, n)).round(5)
+    # Dispersion aléatoire reproductible, par (COG, num_bv) unique.
+    # On calcule le bruit une seule fois par bureau physique pour que T1 et T2
+    # du même bureau apparaissent au même endroit sur la carte.
+    bv_key = df_bv["COG"].astype(str) + "_" + df_bv["Code du b/vote"].astype(str)
+    unique_keys = bv_key.unique()
+    noise = {
+        k: (rng.uniform(-0.012, 0.012), rng.uniform(-0.018, 0.018))
+        for k in unique_keys
+    }
+    df_bv["lat"] = (df_bv["lat_base"] + bv_key.map(lambda k: noise[k][0])).round(5)
+    df_bv["lon"] = (df_bv["lon_base"] + bv_key.map(lambda k: noise[k][1])).round(5)
     df_bv = df_bv.drop(columns=["lat_base", "lon_base"])
 
     return df_bv
